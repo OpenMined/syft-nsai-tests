@@ -1,0 +1,20 @@
+{
+  "name": "syft-nsai-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "End-to-end tests for SyftHub + Syft Space integration",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "typecheck": "tsc --noEmit",
+    "services:up": "docker compose up -d --build",
+    "services:down": "docker compose down",
+    "services:logs": "docker compose logs -f"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.0",
+    "@types/node": "^25.3.3",
+    "typescript": "^5.7.0"
+  }
+}

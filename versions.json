@@ -1,0 +1,4 @@
+{
+  "syfthub": { "repo": "../syfthub", "ref": "main" },
+  "syft-space": { "repo": "../syft-space", "ref": "main" }
+}
