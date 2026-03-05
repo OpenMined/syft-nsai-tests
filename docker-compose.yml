@@ -8,6 +8,6 @@ services:
       context: ../syft-space
       dockerfile: Dockerfile
     environment:
-      SYFTBOX_ASSIGNED_PORT: "8081"
+      SYFT_PORT: "8081"
     ports:
       - "8081:8081"
