@@ -1,0 +1,5 @@
+services:
+  # Expose backend port to host for direct API access from tests
+  backend:
+    ports:
+      - "8000:8000"
