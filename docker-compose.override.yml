@@ -3,3 +3,11 @@ services:
   backend:
     ports:
       - "8000:8000"
+
+  # Test overrides for Space: join hub network so Space can reach hub services,
+  # and point marketplace registration at the local hub proxy.
+  space:
+    networks:
+      - syfthub-network
+    environment:
+      SYFT_DEFAULT_MARKETPLACE_URL: "http://proxy:80"

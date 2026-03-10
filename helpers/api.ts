@@ -42,10 +42,19 @@ function authHeaders(token: string): Record<string, string> {
 export async function registerUser(
   email: string = config.testUser.email,
   password: string = config.testUser.password,
+  username?: string,
+  fullName?: string,
 ): Promise<UserResponse> {
+  const derivedUsername =
+    username ?? email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '').padEnd(3, 'x');
   return request<UserResponse>(config.hub.backendUrl, '/api/v1/auth/register', {
     method: 'POST',
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({
+      email,
+      password,
+      username: derivedUsername,
+      full_name: fullName ?? 'E2E Test User',
+    }),
   });
 }
 
@@ -56,14 +65,20 @@ export async function loginUser(
   email: string = config.testUser.email,
   password: string = config.testUser.password,
 ): Promise<string> {
-  const data = await request<AuthResponse>(
-    config.hub.backendUrl,
-    '/api/v1/auth/login',
-    {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
-    },
-  );
+  const url = `${config.hub.backendUrl}/api/v1/auth/login`;
+  const body = new URLSearchParams({ username: email, password });
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body,
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`POST ${url} → ${response.status}: ${text}`);
+  }
+
+  const data = (await response.json()) as AuthResponse;
   return data.access_token;
 }
 

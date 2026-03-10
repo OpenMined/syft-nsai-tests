@@ -1,11 +1,11 @@
 include:
-  - path: ../syfthub/deploy/docker-compose.dev.yml
+  - path: ./syfthub/deploy/docker-compose.dev.yml
 
 services:
   # --- Syft Space ---
   space:
     build:
-      context: ../syft-space
+      context: ./syft-space
       dockerfile: Dockerfile
     environment:
       SYFT_PORT: "8081"
