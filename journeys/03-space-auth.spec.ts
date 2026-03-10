@@ -1,24 +1,15 @@
 import { test, expect } from '@playwright/test';
-import { execSync } from 'node:child_process';
 import { config } from '../helpers/config';
-import { loginUser, registerUser, waitForService } from '../helpers/api';
+import { loginUser, registerUser } from '../helpers/api';
 
 const ts = Date.now();
 const spaceUrl = `${config.space.url}${config.space.frontendPath}`;
 
 test.describe('Space Authentication & Onboarding', () => {
   // Tests assume a fresh Space (no prior onboarding).
+  // Global setup recreates the Space container with fresh volumes before all tests.
   // Error tests run first (none complete onboarding), then happy path last.
   test.describe.configure({ mode: 'serial' });
-
-  test.beforeAll(async () => {
-    // Recreate Space container with fresh volumes to ensure clean onboarding state
-    execSync('docker compose up -d --force-recreate -V space', {
-      cwd: process.cwd(),
-      stdio: 'pipe',
-    });
-    await waitForService(config.space.url, 60_000);
-  });
 
   test.describe('Error cases', () => {
     test('username already taken shows indicator', async ({ page }) => {

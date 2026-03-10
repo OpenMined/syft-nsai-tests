@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
+  globalSetup: './global-setup',
   testDir: './journeys',
   fullyParallel: false, // journeys are sequential
   forbidOnly: !!process.env.CI,
