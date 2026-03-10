@@ -104,6 +104,168 @@ export async function getBalance(
   );
 }
 
+// ---------------------------------------------------------------------------
+// Space API helpers
+// ---------------------------------------------------------------------------
+
+interface DatasetResponse {
+  id: string;
+  name: string;
+  dtype: string;
+  configuration: Record<string, unknown>;
+  summary: string;
+  tags: string;
+  provisioner_state?: { status: string };
+  connected_endpoints: Array<{ id: string; name: string; slug: string }>;
+  created_at: string;
+  updated_at: string;
+}
+
+interface IngestionStatusResponse {
+  dataset_id: string;
+  dataset_name: string;
+  is_watching: boolean;
+  total_jobs: number;
+  pending: number;
+  in_progress: number;
+  completed: number;
+  failed: number;
+  cancelled: number;
+}
+
+/**
+ * Create a dataset on the Space.
+ */
+export async function createDataset(
+  name: string,
+  filePaths: Array<{ path: string; description?: string }>,
+  options?: { summary?: string; tags?: string },
+): Promise<DatasetResponse> {
+  return request<DatasetResponse>(config.space.url, '/api/v1/datasets', {
+    method: 'POST',
+    body: JSON.stringify({
+      dtype: 'local_file',
+      name,
+      summary: options?.summary ?? '',
+      tags: options?.tags ?? '',
+      configuration: { filePaths },
+    }),
+  });
+}
+
+/**
+ * List all datasets on the Space.
+ */
+export async function listDatasets(): Promise<DatasetResponse[]> {
+  return request<DatasetResponse[]>(config.space.url, '/api/v1/datasets');
+}
+
+/**
+ * Get a single dataset by name.
+ */
+export async function getDataset(name: string): Promise<DatasetResponse> {
+  return request<DatasetResponse>(config.space.url, `/api/v1/datasets/${encodeURIComponent(name)}`);
+}
+
+/**
+ * Start ingestion for a dataset.
+ */
+export async function startIngestion(datasetId: string): Promise<void> {
+  await request<unknown>(config.space.url, `/api/v1/ingestion/datasets/${datasetId}/start`, {
+    method: 'POST',
+  });
+}
+
+/**
+ * Get ingestion status for a dataset.
+ */
+export async function getIngestionStatus(datasetId: string): Promise<IngestionStatusResponse> {
+  return request<IngestionStatusResponse>(
+    config.space.url,
+    `/api/v1/ingestion/datasets/${datasetId}/status`,
+  );
+}
+
+/**
+ * Poll until ingestion completes (all jobs finished — completed or failed, none pending/in_progress).
+ */
+export async function waitForIngestion(
+  datasetId: string,
+  timeoutMs: number = 120_000,
+): Promise<IngestionStatusResponse> {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    const status = await getIngestionStatus(datasetId);
+    if (status.total_jobs > 0 && status.pending === 0 && status.in_progress === 0) {
+      return status;
+    }
+    await new Promise((r) => setTimeout(r, 3_000));
+  }
+  throw new Error(`Ingestion for dataset ${datasetId} did not complete within ${timeoutMs}ms`);
+}
+
+// ---------------------------------------------------------------------------
+// Space marketplace / onboarding helpers
+// ---------------------------------------------------------------------------
+
+interface MarketplaceResponse {
+  id: string;
+  name: string;
+  url: string;
+  email: string;
+  is_default: boolean;
+  is_active: boolean;
+}
+
+/**
+ * Register a new marketplace on the Space (also creates a hub user).
+ * Omitting `url` lets the Space use its configured SYFT_DEFAULT_MARKETPLACE_URL
+ * (the internal docker URL http://proxy:80), which is required because the
+ * Space backend calls the hub from inside the docker network.
+ */
+export async function registerMarketplace(
+  username: string,
+  email: string,
+  password: string,
+  opts?: { name?: string },
+): Promise<MarketplaceResponse> {
+  return request<MarketplaceResponse>(config.space.url, '/api/v1/marketplaces/register', {
+    method: 'POST',
+    body: JSON.stringify({
+      name: opts?.name ?? 'E2E Marketplace',
+      username,
+      email,
+      password,
+    }),
+  });
+}
+
+/**
+ * List registered marketplaces on the Space.
+ */
+export async function listMarketplaces(): Promise<MarketplaceResponse[]> {
+  return request<MarketplaceResponse[]>(config.space.url, '/api/v1/marketplaces');
+}
+
+/**
+ * Ensure the Space is onboarded (has at least one marketplace).
+ * If not, register one using a timestamped test user.
+ */
+export async function ensureSpaceOnboarded(): Promise<void> {
+  try {
+    const existing = await listMarketplaces();
+    if (existing.length > 0) return;
+  } catch {
+    // API may 500 if DB not ready yet — fall through to register
+  }
+  const ts = Date.now();
+  await registerMarketplace(
+    `e2eauto${ts}`,
+    `e2e-auto-${ts}@test.openmined.org`,
+    'TestPass123!',
+  );
+}
+
 /**
  * Wait until a service responds with a 200 status.
  */

@@ -6,8 +6,14 @@ services:
 
   # Test overrides for Space: join hub network so Space can reach hub services,
   # and point marketplace registration at the local hub proxy.
+  # Mount test fixtures so the file explorer can see them during dataset creation.
   space:
     networks:
       - syfthub-network
     environment:
       SYFT_DEFAULT_MARKETPLACE_URL: "http://proxy:80"
+    volumes:
+      - ./fixtures/test-docs:/root/test-docs:ro
+      # Persist ChromaDB's ONNX embedding model (~166MB) on host so it survives
+      # `docker compose down -v` and doesn't re-download every test run.
+      - ./.cache/chroma-models:/root/.cache/chroma/onnx_models:rw

@@ -1,0 +1,27 @@
+AI Safety Research Report - Q4 2025
+
+Executive Summary
+
+This report examines the current state of AI safety research, focusing on alignment techniques,
+interpretability advances, and risk mitigation strategies. The findings suggest that while
+significant progress has been made in mechanistic interpretability, challenges remain in
+scaling these approaches to frontier models.
+
+Key Findings
+
+1. Constitutional AI methods have shown promise in reducing harmful outputs by 73% compared
+   to baseline RLHF approaches, while maintaining helpfulness scores within 5% of unaligned models.
+
+2. Sparse autoencoders have enabled researchers to identify and manipulate individual features
+   in transformer models with up to 2 billion parameters, though scaling beyond this remains
+   an active area of research.
+
+3. Red-teaming exercises conducted across 15 organizations revealed that multi-turn adversarial
+   attacks remain the most effective method for eliciting unsafe behavior, highlighting the need
+   for improved context-window safety mechanisms.
+
+Recommendations
+
+- Invest in scalable interpretability tools that can keep pace with model size increases
+- Develop standardized benchmarks for measuring alignment robustness
+- Establish cross-organizational sharing of red-team findings through secure channels

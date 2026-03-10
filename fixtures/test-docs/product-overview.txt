@@ -1,0 +1,30 @@
+Syft Space - Product Overview
+
+What is Syft Space?
+
+Syft Space is a privacy-preserving data platform that enables organizations to share and
+monetize their datasets without exposing raw data. It provides a secure environment for
+creating queryable endpoints backed by vector databases and AI models.
+
+Core Features
+
+- Dataset Management: Ingest documents from local files or connect to external vector databases
+  like Weaviate and Qdrant. Automatic chunking, embedding, and indexing of documents.
+
+- Model Integration: Configure OpenAI-compatible models for summarization and question-answering.
+  Support for custom model endpoints with health monitoring.
+
+- Endpoint Publishing: Create RAG (Retrieval-Augmented Generation) endpoints that combine
+  datasets with models. Publish endpoints to the SyftHub marketplace for discovery.
+
+- Access Control: Fine-grained policies for rate limiting and access control. Whitelist or
+  blacklist specific users or organizations.
+
+- Accounting: Built-in transaction system for tracking usage and billing. Transparent pricing
+  per query with configurable rates.
+
+Architecture
+
+Syft Space runs as a self-hosted server that connects to the SyftHub marketplace. The connection
+is established through an ngrok tunnel or custom domain, allowing the hub to route queries to
+the Space instance while keeping the data local.
