@@ -9,10 +9,11 @@ test.describe('Smoke', () => {
     ).toBeVisible({ timeout: config.timeouts.navigation });
   });
 
-  test('space loads and shows onboarding', async ({ page }) => {
+  test('space loads and renders', async ({ page }) => {
     await page.goto(`${config.space.url}${config.space.frontendPath}`);
+    // Space shows onboarding page (fresh) or home page (already onboarded)
     await expect(
-      page.getByRole('heading', { name: /welcome to syft space/i }),
+      page.getByRole('heading', { name: /welcome to.*syft space/i }),
     ).toBeVisible({ timeout: config.timeouts.navigation });
   });
 });

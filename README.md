@@ -6,13 +6,7 @@ End-to-end tests for **SyftHub + Syft Space** integration using Playwright.
 
 - Node.js 20+ (or Bun)
 - Docker & Docker Compose v2.20+
-- Sibling repos cloned:
-  ```
-  ~/Projects/OpenMined/
-  ├── syfthub/
-  ├── syft-space/
-  └── syft-nsai-tests/  ← this repo
-  ```
+- `syfthub` and `syft-space` repos cloned locally
 
 ## Setup
 
@@ -26,11 +20,15 @@ npx playwright install chromium
 # Copy env file
 cp .env.example .env
 
+# Create symlinks to sibling repos (adjust paths to your local clones)
+ln -sf /path/to/syfthub ./syfthub
+ln -sf /path/to/syft-space ./syft-space
+
 # Build syfthub SDK (required for hub frontend)
-cd ../syfthub/sdk/typescript && npm ci && ./node_modules/.bin/tsup
+cd ./syfthub/sdk/typescript && npm ci && ./node_modules/.bin/tsup
 
 # Build syft-space frontend (required for space Docker image)
-cd ../syft-space/frontend && bun install && bun run build
+cd ./syft-space/frontend && bun install && bun run build
 ```
 
 ## Running tests
@@ -67,7 +65,7 @@ versions.json       # Pinned service versions
 
 ## Architecture
 
-`docker-compose.yml` uses the compose `include:` directive to pull in syfthub's dev compose (`../syfthub/deploy/docker-compose.dev.yml`) as the single source of truth. Only the space service is defined locally. A `docker-compose.override.yml` exposes the backend port to the host for direct API access from tests.
+`docker-compose.yml` uses the compose `include:` directive to pull in syfthub's dev compose (`./syfthub/deploy/docker-compose.dev.yml`) via symlink as the single source of truth. Only the space service is defined locally. A `docker-compose.override.yml` exposes the backend port to the host for direct API access from tests and adds Space to the hub network.
 
 | Service | Port | Source |
 |---------|------|--------|
@@ -82,7 +80,7 @@ versions.json       # Pinned service versions
 ## Troubleshooting
 
 - **Services won't start**: Check `docker compose logs <service>`
-- **Hub frontend errors**: Ensure `@syfthub/sdk` is built (`../syfthub/sdk/typescript`)
-- **Space blank page**: Ensure frontend is built (`../syft-space/frontend`) without `TAURI_ENV_PLATFORM` set
+- **Hub frontend errors**: Ensure `@syfthub/sdk` is built (`./syfthub/sdk/typescript`)
+- **Space blank page**: Ensure frontend is built (`./syft-space/frontend`) without `TAURI_ENV_PLATFORM` set
 - **Tests timeout**: Increase `config.timeouts` in `helpers/config.ts`
 - **Port conflicts**: Update ports in `.env` and `docker-compose.yml`

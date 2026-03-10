@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 ## What this repo is
-Cross-service E2E tests for SyftHub + Syft Space. Tests run against both services simultaneously using Playwright. The sibling repos (`../syfthub`, `../syft-space`) are built via docker-compose.
+Cross-service E2E tests for SyftHub + Syft Space. Tests run against both services simultaneously using Playwright. The sibling repos are symlinked into the repo root (`./syfthub`, `./syft-space`) and built via docker-compose.
 
 ## Commands
 ```bash
@@ -16,10 +16,10 @@ docker compose down                # Stop services
 ## Prerequisites before starting services
 ```bash
 # Build syfthub SDK (required for hub frontend)
-cd ../syfthub/sdk/typescript && npm ci && ./node_modules/.bin/tsup
+cd ./syfthub/sdk/typescript && npm ci && ./node_modules/.bin/tsup
 
 # Build syft-space frontend (required for space Docker image)
-cd ../syft-space/frontend && bun install && bun run build
+cd ./syft-space/frontend && bun install && bun run build
 ```
 
 ## Key conventions
