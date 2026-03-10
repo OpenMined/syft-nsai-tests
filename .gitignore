@@ -5,6 +5,7 @@ playwright-report/
 blob-report/
 .env
 *.tgz
+.cache/
 
 # Symlinks to sibling repos (create these locally, see README)
 syfthub

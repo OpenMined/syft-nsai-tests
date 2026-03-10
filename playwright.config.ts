@@ -2,6 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   globalSetup: './global-setup',
+  globalTeardown: './global-teardown',
   testDir: './journeys',
   fullyParallel: false, // journeys are sequential
   forbidOnly: !!process.env.CI,

@@ -14,3 +14,6 @@ services:
       SYFT_DEFAULT_MARKETPLACE_URL: "http://proxy:80"
     volumes:
       - ./fixtures/test-docs:/root/test-docs:ro
+      # Persist ChromaDB's ONNX embedding model (~166MB) on host so it survives
+      # `docker compose down -v` and doesn't re-download every test run.
+      - ./.cache/chroma-models:/root/.cache/chroma/onnx_models:rw
