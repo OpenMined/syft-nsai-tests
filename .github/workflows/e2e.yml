@@ -95,29 +95,33 @@ jobs:
       - name: Build prerequisites, images & install test deps
         run: |
           # Free disk space in background (removes ~15GB of unused pre-installed SDKs)
-          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc &
+          (echo "[disk-cleanup] start" && sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc && echo "[disk-cleanup] done") &
 
           # Build syfthub SDK and syft-space frontend in parallel
-          (cd syfthub/sdk/typescript && npm ci && ./node_modules/.bin/tsup) &
-          (cd syft-space/frontend && bun install && bun run build) &
+          (echo "[sdk] start" && cd syfthub/sdk/typescript && npm ci && ./node_modules/.bin/tsup && echo "[sdk] done") &
+          (echo "[frontend] start" && cd syft-space/frontend && bun install && bun run build && echo "[frontend] done") &
 
           # Install test deps in parallel
           (
+            echo "[test-deps] start"
             bun install
             if [ "${{ steps.playwright-cache.outputs.cache-hit }}" != "true" ]; then
               npx playwright install --with-deps chromium
             else
               npx playwright install-deps chromium
             fi
+            echo "[test-deps] done"
           ) &
 
-          sudo docker image prune -af &
+          (echo "[docker-prune] start" && sudo docker image prune -af && echo "[docker-prune] done") &
 
           # Wait for all background jobs before Docker build
           wait
+          echo "[docker-build] start"
 
-          # Build Docker images with layer caching
-          docker compose build
+          # Build Docker images with layer caching (--load imports into local store)
+          docker buildx bake -f docker-compose.yml -f docker-compose.override.yml -f docker-compose.ci.yml --load
+          echo "[docker-build] done"
         timeout-minutes: 10
 
       # ── 4. Start services ─────────────────────────────────────────
