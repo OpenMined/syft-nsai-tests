@@ -67,12 +67,6 @@ jobs:
           path: syft-space
 
       # ── 2. Build prerequisites ──────────────────────────────────────
-      - name: Free disk space
-        run: |
-          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc
-          sudo docker image prune -af
-          df -h /
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -84,19 +78,7 @@ jobs:
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build syfthub SDK
-        run: |
-          cd syfthub/sdk/typescript
-          npm ci
-          ./node_modules/.bin/tsup
-
-      - name: Build syft-space frontend
-        run: |
-          cd syft-space/frontend
-          bun install
-          bun run build
-
-      # ── 3. Build images & install test deps in parallel ────────────
+      # ── 3. Build everything in parallel ────────────────────────────
       - name: Cache ChromaDB ONNX models
         uses: actions/cache@v4
         with:
@@ -110,22 +92,32 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('bun.lockb') }}
 
-      - name: Build images & install test deps
+      - name: Build prerequisites, images & install test deps
         run: |
-          # Build Docker images with layer caching
-          docker compose build &
-          BUILD_PID=$!
+          # Free disk space in background (removes ~15GB of unused pre-installed SDKs)
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc &
+
+          # Build syfthub SDK and syft-space frontend in parallel
+          (cd syfthub/sdk/typescript && npm ci && ./node_modules/.bin/tsup) &
+          (cd syft-space/frontend && bun install && bun run build) &
 
           # Install test deps in parallel
-          bun install
-          if [ "${{ steps.playwright-cache.outputs.cache-hit }}" != "true" ]; then
-            npx playwright install --with-deps chromium
-          else
-            npx playwright install-deps chromium
-          fi
+          (
+            bun install
+            if [ "${{ steps.playwright-cache.outputs.cache-hit }}" != "true" ]; then
+              npx playwright install --with-deps chromium
+            else
+              npx playwright install-deps chromium
+            fi
+          ) &
 
-          # Wait for image builds to finish
-          wait $BUILD_PID
+          sudo docker image prune -af &
+
+          # Wait for all background jobs before Docker build
+          wait
+
+          # Build Docker images with layer caching
+          docker compose build
         timeout-minutes: 10
 
       # ── 4. Start services ─────────────────────────────────────────
