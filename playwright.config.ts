@@ -8,7 +8,9 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: 1, // cross-service flows need sequential execution
-  reporter: process.env.CI ? 'html' : 'list',
+  reporter: process.env.CI
+    ? [['html'], ['github'], ['junit', { outputFile: 'test-results/junit.xml' }]]
+    : 'list',
   timeout: 60_000,
 
   use: {
