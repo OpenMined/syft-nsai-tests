@@ -16,8 +16,11 @@ if [ ! -f .env ]; then
 fi
 
 # Create symlinks to sibling repos (skip if already exist)
-[ -L ./syfthub ] || ln -sf ../syfthub ./syfthub
-[ -L ./syft-space ] || ln -sf ../syft-space ./syft-space
+# Override with SYFTHUB_PATH / SYFT_SPACE_PATH env vars; default to sibling dirs
+SYFTHUB_PATH="${SYFTHUB_PATH:-../syfthub}"
+SYFT_SPACE_PATH="${SYFT_SPACE_PATH:-../syft-space}"
+[ -L ./syfthub ] || ln -sf "$SYFTHUB_PATH" ./syfthub
+[ -L ./syft-space ] || ln -sf "$SYFT_SPACE_PATH" ./syft-space
 
 # Build syfthub SDK (required for hub frontend)
 cd ./syfthub/sdk/typescript
