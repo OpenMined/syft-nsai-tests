@@ -1,0 +1,148 @@
+# End-to-end tests for SyftHub + Syft Space
+#
+# Triggers:
+#   - workflow_call from syfthub / syft-space (on push to main)
+#   - Nightly cron at 06:00 UTC
+#   - Manual via workflow_dispatch (with optional ref overrides)
+#   - Push to main in this repo
+
+name: E2E Tests
+
+on:
+  workflow_call:
+    inputs:
+      syfthub_ref:
+        type: string
+        default: "main"
+      syft_space_ref:
+        type: string
+        default: "main"
+
+  schedule:
+    - cron: "0 6 * * *" # every day at 06:00 UTC
+
+  workflow_dispatch:
+    inputs:
+      syfthub_ref:
+        description: "syfthub branch/tag/SHA to test"
+        default: "main"
+      syft_space_ref:
+        description: "syft-space branch/tag/SHA to test"
+        default: "main"
+
+  push:
+    branches: [main]
+
+# Cancel in-progress runs for the same ref
+concurrency:
+  group: e2e-${{ github.event_name }}-${{ inputs.syfthub_ref || 'main' }}-${{ inputs.syft_space_ref || 'main' }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      # ── 1. Checkout repos ───────────────────────────────────────────
+      - name: Checkout test repo
+        uses: actions/checkout@v4
+
+      - name: Checkout syfthub
+        uses: actions/checkout@v4
+        with:
+          repository: OpenMined/syfthub
+          ref: ${{ inputs.syfthub_ref || 'main' }}
+          path: syfthub
+
+      - name: Checkout syft-space
+        uses: actions/checkout@v4
+        with:
+          repository: OpenMined/syft-space
+          ref: ${{ inputs.syft_space_ref || 'main' }}
+          path: syft-space
+
+      # ── 2. Build prerequisites ──────────────────────────────────────
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Build syfthub SDK
+        run: |
+          cd syfthub/sdk/typescript
+          npm ci
+          ./node_modules/.bin/tsup
+
+      - name: Build syft-space frontend
+        run: |
+          cd syft-space/frontend
+          bun install
+          bun run build
+
+      # ── 3. Start services ──────────────────────────────────────────
+      - name: Cache ChromaDB ONNX models
+        uses: actions/cache@v4
+        with:
+          path: .cache/chroma-models
+          key: chroma-onnx-models-v1
+
+      - name: Start services
+        run: docker compose up -d --build --wait
+        timeout-minutes: 10
+
+      - name: Wait for services to be healthy
+        run: |
+          echo "Waiting for hub proxy..."
+          timeout 120 bash -c 'until curl -sf http://localhost:8080 > /dev/null 2>&1; do sleep 2; done'
+          echo "Waiting for space..."
+          timeout 120 bash -c 'until curl -sf http://localhost:8081 > /dev/null 2>&1; do sleep 2; done'
+          echo "All services up."
+
+      # ── 4. Install & run tests ──────────────────────────────────────
+      - name: Install test dependencies
+        run: |
+          bun install
+          npx playwright install --with-deps chromium
+
+      - name: Run E2E tests
+        run: npx playwright test
+        env:
+          CI: true
+
+      # ── 5. Artifacts ───────────────────────────────────────────────
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-results/
+          retention-days: 14
+
+      - name: Dump service logs on failure
+        if: failure()
+        run: docker compose logs --tail=200 > /tmp/docker-logs.txt 2>&1
+
+      - name: Upload docker logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-logs
+          path: /tmp/docker-logs.txt
+          retention-days: 7
+
+      # ── 6. Teardown ────────────────────────────────────────────────
+      - name: Stop services
+        if: always()
+        run: docker compose down
