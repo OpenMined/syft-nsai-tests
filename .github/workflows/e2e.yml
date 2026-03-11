@@ -67,6 +67,12 @@ jobs:
           path: syft-space
 
       # ── 2. Build prerequisites ──────────────────────────────────────
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc
+          sudo docker image prune -af
+          df -h /
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -106,9 +112,9 @@ jobs:
 
       - name: Build images & install test deps
         run: |
-          # Build Docker images with layer caching (--load imports into local store)
-          docker buildx bake -f docker-compose.yml -f docker-compose.override.yml -f docker-compose.ci.yml --load &
-          BAKE_PID=$!
+          # Build Docker images with layer caching
+          docker compose build &
+          BUILD_PID=$!
 
           # Install test deps in parallel
           bun install
@@ -119,7 +125,7 @@ jobs:
           fi
 
           # Wait for image builds to finish
-          wait $BAKE_PID
+          wait $BUILD_PID
         timeout-minutes: 10
 
       # ── 4. Start services ─────────────────────────────────────────
