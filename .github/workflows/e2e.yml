@@ -119,31 +119,20 @@ jobs:
           wait
           echo "[docker-build] start"
 
-          # Build Docker images with layer caching (--load imports into local store)
+          # Pull image-only services and build custom images in parallel
+          (echo "[docker-pull] start" && docker compose pull --ignore-buildable && echo "[docker-pull] done") &
           docker buildx bake -f docker-compose.yml -f docker-compose.override.yml -f docker-compose.ci.yml --load
+          wait
           echo "[docker-build] done"
         timeout-minutes: 10
 
-      # ── 4. Start services ─────────────────────────────────────────
-      - name: Start services
-        run: docker compose up -d --wait
-        timeout-minutes: 5
-
-      - name: Wait for services to be healthy
-        run: |
-          echo "Waiting for hub proxy..."
-          timeout 120 bash -c 'until curl -sf http://localhost:8080 > /dev/null 2>&1; do sleep 2; done'
-          echo "Waiting for space..."
-          timeout 120 bash -c 'until curl -sf http://localhost:8081 > /dev/null 2>&1; do sleep 2; done'
-          echo "All services up."
-
-      # ── 5. Run tests ──────────────────────────────────────────────
+      # ── 4. Run tests ───────────────────────────────────────────────
       - name: Run E2E tests
         run: npx playwright test
         env:
           CI: true
 
-      # ── 6. Test results in GitHub UI ────────────────────────────────
+      # ── 5. Test results in GitHub UI ────────────────────────────────
       - name: Publish test results
         if: always()
         uses: dorny/test-reporter@v1
@@ -152,7 +141,7 @@ jobs:
           path: test-results/junit.xml
           reporter: java-junit
 
-      # ── 7. Artifacts ───────────────────────────────────────────────
+      # ── 6. Artifacts ───────────────────────────────────────────────
       - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@v4
@@ -181,7 +170,7 @@ jobs:
           path: /tmp/docker-logs.txt
           retention-days: 7
 
-      # ── 8. Teardown ────────────────────────────────────────────────
+      # ── 7. Teardown ────────────────────────────────────────────────
       - name: Stop services
         if: always()
         run: docker compose down
