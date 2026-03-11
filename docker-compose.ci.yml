@@ -1,5 +1,5 @@
 # CI-only overrides: Docker layer caching via GitHub Actions cache.
-# Used with: docker compose -f docker-compose.yml -f docker-compose.override.yml -f docker-compose.ci.yml
+# Used by docker/bake-action to cache build layers between CI runs.
 
 services:
   backend:

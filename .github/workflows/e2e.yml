@@ -38,10 +38,6 @@ concurrency:
   group: e2e-${{ github.event_name }}-${{ inputs.syfthub_ref || 'main' }}-${{ inputs.syft_space_ref || 'main' }}
   cancel-in-progress: true
 
-env:
-  # Use CI compose overlay for Docker layer caching
-  COMPOSE_FILE: docker-compose.yml:docker-compose.override.yml:docker-compose.ci.yml
-
 jobs:
   e2e:
     runs-on: ubuntu-latest
@@ -77,6 +73,9 @@ jobs:
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
+
+      - name: Expose GitHub Actions runtime for Docker cache
+        uses: crazy-max/ghaction-github-runtime@v3
 
       # ── 3. Build everything in parallel ────────────────────────────
       - name: Cache ChromaDB ONNX models
