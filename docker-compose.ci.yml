@@ -1,0 +1,45 @@
+# CI-only overrides: Docker layer caching via GitHub Actions cache.
+# Used with: docker compose -f docker-compose.yml -f docker-compose.override.yml -f docker-compose.ci.yml
+
+services:
+  backend:
+    build:
+      cache_from:
+        - type=gha,scope=backend
+      cache_to:
+        - type=gha,mode=max,scope=backend
+
+  frontend:
+    build:
+      cache_from:
+        - type=gha,scope=frontend
+      cache_to:
+        - type=gha,mode=max,scope=frontend
+
+  aggregator:
+    build:
+      cache_from:
+        - type=gha,scope=aggregator
+      cache_to:
+        - type=gha,mode=max,scope=aggregator
+
+  mcp:
+    build:
+      cache_from:
+        - type=gha,scope=mcp
+      cache_to:
+        - type=gha,mode=max,scope=mcp
+
+  space:
+    build:
+      cache_from:
+        - type=gha,scope=space
+      cache_to:
+        - type=gha,mode=max,scope=space
+
+  mock-openai:
+    build:
+      cache_from:
+        - type=gha,scope=mock-openai
+      cache_to:
+        - type=gha,mode=max,scope=mock-openai

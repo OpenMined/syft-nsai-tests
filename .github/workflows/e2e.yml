@@ -38,6 +38,10 @@ concurrency:
   group: e2e-${{ github.event_name }}-${{ inputs.syfthub_ref || 'main' }}-${{ inputs.syft_space_ref || 'main' }}
   cancel-in-progress: true
 
+env:
+  # Use CI compose overlay for Docker layer caching
+  COMPOSE_FILE: docker-compose.yml:docker-compose.override.yml:docker-compose.ci.yml
+
 jobs:
   e2e:
     runs-on: ubuntu-latest
@@ -62,7 +66,7 @@ jobs:
           ref: ${{ inputs.syft_space_ref || 'main' }}
           path: syft-space
 
-      # ── 2. Tool setup ─────────────────────────────────────────────
+      # ── 2. Build prerequisites ──────────────────────────────────────
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -74,7 +78,6 @@ jobs:
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # ── 3. Build prerequisites ──────────────────────────────────────
       - name: Build syfthub SDK
         run: |
           cd syfthub/sdk/typescript
@@ -87,7 +90,7 @@ jobs:
           bun install
           bun run build
 
-      # ── 4. Start services & install test deps in parallel ──────────
+      # ── 3. Build images & install test deps in parallel ────────────
       - name: Cache ChromaDB ONNX models
         uses: actions/cache@v4
         with:
@@ -101,26 +104,28 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('bun.lockb') }}
 
-      - name: Install test dependencies
-        run: bun install
-
-      - name: Start services & install Playwright browser
+      - name: Build images & install test deps
         run: |
-          # Start docker build + services in background
-          docker compose up -d --build --wait &
-          DOCKER_PID=$!
+          # Build Docker images with layer caching (--load imports into local store)
+          docker buildx bake -f docker-compose.yml -f docker-compose.override.yml -f docker-compose.ci.yml --load &
+          BAKE_PID=$!
 
-          # Install Playwright browser in parallel (skip if cached)
+          # Install test deps in parallel
+          bun install
           if [ "${{ steps.playwright-cache.outputs.cache-hit }}" != "true" ]; then
             npx playwright install --with-deps chromium
           else
-            # Still need system deps even if browser binary is cached
             npx playwright install-deps chromium
           fi
 
-          # Wait for docker compose to finish
-          wait $DOCKER_PID
+          # Wait for image builds to finish
+          wait $BAKE_PID
         timeout-minutes: 10
+
+      # ── 4. Start services ─────────────────────────────────────────
+      - name: Start services
+        run: docker compose up -d --wait
+        timeout-minutes: 5
 
       - name: Wait for services to be healthy
         run: |
