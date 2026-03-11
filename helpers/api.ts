@@ -138,7 +138,7 @@ interface IngestionStatusResponse {
  */
 export async function createDataset(
   name: string,
-  filePaths: Array<{ path: string; description?: string }>,
+  filePaths: Array<{ path: string; description: string }>,
   options?: { summary?: string; tags?: string },
 ): Promise<DatasetResponse> {
   return request<DatasetResponse>(config.space.url, '/api/v1/datasets', {
@@ -348,6 +348,115 @@ export async function ensureSpaceOnboarded(): Promise<void> {
     'TestPass123!',
   );
 }
+
+// ---------------------------------------------------------------------------
+// Space endpoint helpers
+// ---------------------------------------------------------------------------
+
+interface EndpointResponse {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  summary: string;
+  dataset_id?: string;
+  model_id?: string;
+  response_type: string;
+  published: boolean;
+  tags: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface PublishEndpointResponse {
+  endpoint_slug: string;
+  results: Array<{ marketplace_id: string; success: boolean; message?: string; error?: string }>;
+}
+
+/**
+ * Create an endpoint on the Space.
+ */
+export async function createEndpoint(
+  slug: string,
+  opts: {
+    name?: string;
+    datasetId?: string;
+    modelId?: string;
+    responseType?: string;
+    summary?: string;
+    tags?: string;
+    description?: string;
+  } = {},
+): Promise<EndpointResponse> {
+  return request<EndpointResponse>(config.space.url, '/api/v1/endpoints/', {
+    method: 'POST',
+    body: JSON.stringify({
+      slug,
+      name: opts.name ?? slug,
+      dataset_id: opts.datasetId,
+      model_id: opts.modelId,
+      response_type: opts.responseType ?? 'both',
+      summary: opts.summary ?? '',
+      tags: opts.tags ?? '',
+      description: opts.description ?? '',
+    }),
+  });
+}
+
+/**
+ * Publish an endpoint to all registered marketplaces.
+ */
+export async function publishEndpoint(slug: string): Promise<PublishEndpointResponse> {
+  return request<PublishEndpointResponse>(
+    config.space.url,
+    `/api/v1/endpoints/${encodeURIComponent(slug)}/publish`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ publish_to_all_marketplaces: true }),
+    },
+  );
+}
+
+/**
+ * List all endpoints on the Space.
+ */
+export async function listSpaceEndpoints(): Promise<EndpointResponse[]> {
+  return request<EndpointResponse[]>(config.space.url, '/api/v1/endpoints/');
+}
+
+/**
+ * Get a single endpoint by slug.
+ */
+export async function getEndpointDetail(slug: string): Promise<EndpointResponse> {
+  return request<EndpointResponse>(
+    config.space.url,
+    `/api/v1/endpoints/${encodeURIComponent(slug)}`,
+  );
+}
+
+/**
+ * Delete an endpoint by slug.
+ */
+export async function deleteEndpoint(slug: string): Promise<{ message: string }> {
+  return request<{ message: string }>(
+    config.space.url,
+    `/api/v1/endpoints/${encodeURIComponent(slug)}`,
+    { method: 'DELETE' },
+  );
+}
+
+/**
+ * Get public endpoints from the Hub.
+ */
+export async function getPublicEndpoints(token?: string): Promise<unknown[]> {
+  return request<unknown[]>(config.hub.backendUrl, '/api/v1/endpoints/public', {
+    headers: token ? authHeaders(token) : {},
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Utilities
+// ---------------------------------------------------------------------------
 
 /**
  * Wait until a service responds with a 200 status.
