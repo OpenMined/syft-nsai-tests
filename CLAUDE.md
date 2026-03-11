@@ -5,21 +5,10 @@ Cross-service E2E tests for SyftHub + Syft Space. Tests run against both service
 
 ## Commands
 ```bash
-bun install                        # Install deps
+./setup.sh                         # First-time setup (deps, symlinks, builds)
 npx tsc --noEmit                   # Typecheck
-npx playwright test                # Run tests
+npx playwright test                # Run tests (auto-starts/stops containers)
 npx playwright test --ui           # Debug with UI
-docker compose up -d --build       # Start all services
-docker compose down                # Stop services
-```
-
-## Prerequisites before starting services
-```bash
-# Build syfthub SDK (required for hub frontend)
-cd ./syfthub/sdk/typescript && npm ci && ./node_modules/.bin/tsup
-
-# Build syft-space frontend (required for space Docker image)
-cd ./syft-space/frontend && bun install && bun run build
 ```
 
 ## Key conventions

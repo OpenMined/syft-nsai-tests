@@ -11,43 +11,18 @@ End-to-end tests for **SyftHub + Syft Space** integration using Playwright.
 ## Setup
 
 ```bash
-# Install dependencies
-bun install
-
-# Install Playwright browsers
-npx playwright install chromium
-
-# Copy env file
-cp .env.example .env
-
-# Create symlinks to sibling repos (adjust paths to your local clones)
-ln -sf /path/to/syfthub ./syfthub
-ln -sf /path/to/syft-space ./syft-space
-
-# Build syfthub SDK (required for hub frontend)
-cd ./syfthub/sdk/typescript && npm ci && ./node_modules/.bin/tsup
-
-# Build syft-space frontend (required for space Docker image)
-cd ./syft-space/frontend && bun install && bun run build
+./setup.sh
 ```
+
+This installs dependencies, Playwright browsers, creates symlinks to sibling repos, and builds the syfthub SDK and syft-space frontend. See `setup.sh` for details.
 
 ## Running tests
 
+Playwright's global setup/teardown automatically starts containers (with a fresh DB) before tests and tears them down after.
+
 ```bash
-# 1. Start all services
-docker compose up -d --build
-
-# 2. Wait for services to be healthy
-docker compose ps
-
-# 3. Run tests
-npx playwright test
-
-# 4. Run with UI (for debugging)
-npx playwright test --ui
-
-# 5. Tear down
-docker compose down
+npx playwright test          # Run all tests
+npx playwright test --ui     # Debug with UI
 ```
 
 ## Project structure
