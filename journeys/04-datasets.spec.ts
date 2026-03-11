@@ -21,6 +21,16 @@ const TEST_FILE_NAMES = [
 ];
 
 /**
+ * Navigate to the datasets list page and wait for it to load.
+ */
+async function goToDatasetsPage(page: Page) {
+  await page.goto(datasetsUrl);
+  await expect(page.getByText(/your datasets/i)).toBeVisible({
+    timeout: config.timeouts.navigation,
+  });
+}
+
+/**
  * Navigate to the dataset detail page and wait for it to load.
  */
 async function goToDatasetDetail(page: Page, datasetName: string) {
@@ -30,7 +40,7 @@ async function goToDatasetDetail(page: Page, datasetName: string) {
   ).toBeVisible({ timeout: config.timeouts.navigation });
 }
 
-test.describe('Dataset Creation & Ingestion', () => {
+test.describe('Dataset Management', () => {
   test.describe.configure({ mode: 'serial' });
 
   const datasetName = `e2e-dataset-${ts}`;
@@ -43,11 +53,7 @@ test.describe('Dataset Creation & Ingestion', () => {
   });
 
   test('create dataset via UI with file selection', async ({ page }) => {
-    // Navigate to datasets page
-    await page.goto(datasetsUrl);
-    await expect(page.getByText(/your datasets/i)).toBeVisible({
-      timeout: config.timeouts.navigation,
-    });
+    await goToDatasetsPage(page);
 
     // Click "Add Dataset" button (page may show both header and empty-state buttons)
     await page.getByRole('button', { name: /add dataset/i }).first().click();
@@ -172,5 +178,72 @@ test.describe('Dataset Creation & Ingestion', () => {
     await expect(
       page.getByText(/no errored files found/i),
     ).toBeVisible({ timeout: config.timeouts.assertion });
+  });
+
+  test('edit dataset via UI updates summary and tags', async ({ page }) => {
+    await goToDatasetsPage(page);
+
+    // Click Edit on the dataset card
+    const datasetCard = page.locator('.bg-card', {
+      has: page.getByRole('heading', { name: datasetName }),
+    });
+    await datasetCard.getByRole('button', { name: /edit/i }).click();
+
+    // Edit dialog should open with pre-filled name
+    await expect(
+      page.getByRole('heading', { name: /edit dataset/i }),
+    ).toBeVisible();
+    await expect(page.locator('#dataset-name')).toHaveValue(datasetName);
+
+    // Update summary
+    await page.locator('#summary').fill('Updated summary for E2E dataset');
+
+    // Add a tag
+    const dialog = page.getByRole('dialog');
+    await dialog.locator('#topics').fill('updated-tag');
+    await dialog.locator('#topics').press('Enter');
+    await expect(dialog.getByText('updated-tag')).toBeVisible();
+
+    // Submit
+    await page.getByRole('button', { name: /update dataset/i }).click();
+
+    // Dialog should close
+    await expect(
+      page.getByRole('heading', { name: /edit dataset/i }),
+    ).toBeHidden({ timeout: config.timeouts.navigation });
+
+    // Verify changes on the detail page
+    await page.goto(datasetDetailUrl(datasetName));
+    await expect(
+      page.getByRole('heading', { name: datasetName }),
+    ).toBeVisible({ timeout: config.timeouts.navigation });
+
+    await expect(page.getByText('Updated summary for E2E dataset')).toBeVisible();
+    await expect(page.getByText('updated-tag')).toBeVisible();
+  });
+
+  test('dataset can be deleted via UI', async ({ page }) => {
+    await goToDatasetsPage(page);
+
+    // Find the dataset card and click its Delete button
+    const datasetCard = page.locator('.bg-card', {
+      has: page.getByRole('heading', { name: datasetName }),
+    });
+    await datasetCard
+      .getByRole('button', { name: /delete/i })
+      .click();
+
+    // Confirm deletion in the confirmation dialog
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole('button', { name: /delete/i }).click();
+
+    // Wait for the confirmation dialog to close
+    await expect(dialog).toBeHidden({ timeout: config.timeouts.navigation });
+
+    // Dataset should disappear from the list
+    await expect(
+      page.getByRole('heading', { name: datasetName }),
+    ).toBeHidden({ timeout: config.timeouts.action });
   });
 });
