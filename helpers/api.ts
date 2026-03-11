@@ -205,6 +205,89 @@ export async function waitForIngestion(
 }
 
 // ---------------------------------------------------------------------------
+// Space model helpers
+// ---------------------------------------------------------------------------
+
+interface ModelResponse {
+  id: string;
+  name: string;
+  dtype: string;
+  configuration: Record<string, unknown>;
+  summary: string;
+  tags: string;
+  connected_endpoints: Array<{ id: string; name: string; slug: string }>;
+  created_at: string;
+  updated_at: string;
+}
+
+interface HealthcheckResponse {
+  status: 'healthy' | 'unhealthy';
+  message: string;
+}
+
+/**
+ * Create a model on the Space.
+ */
+export async function createModel(
+  name: string,
+  options: {
+    apiKey: string;
+    model: string;
+    baseUrl: string;
+    summary?: string;
+    tags?: string;
+  },
+): Promise<ModelResponse> {
+  return request<ModelResponse>(config.space.url, '/api/v1/models/', {
+    method: 'POST',
+    body: JSON.stringify({
+      dtype: 'openai',
+      name,
+      configuration: {
+        api_key: options.apiKey,
+        model: options.model,
+        base_url: options.baseUrl,
+      },
+      summary: options.summary ?? '',
+      tags: options.tags ?? '',
+    }),
+  });
+}
+
+/**
+ * List all models on the Space.
+ */
+export async function listModels(): Promise<ModelResponse[]> {
+  return request<ModelResponse[]>(config.space.url, '/api/v1/models/');
+}
+
+/**
+ * Get a single model by name.
+ */
+export async function getModel(name: string): Promise<ModelResponse> {
+  return request<ModelResponse>(config.space.url, `/api/v1/models/${encodeURIComponent(name)}`);
+}
+
+/**
+ * Delete a model by name.
+ */
+export async function deleteModel(name: string): Promise<{ message: string }> {
+  return request<{ message: string }>(config.space.url, `/api/v1/models/${encodeURIComponent(name)}`, {
+    method: 'DELETE',
+  });
+}
+
+/**
+ * Check health of a model by name (public endpoint — no auth required).
+ */
+export async function getModelHealth(name: string): Promise<HealthcheckResponse> {
+  return request<HealthcheckResponse>(
+    config.space.url,
+    `/api/v1/models/${encodeURIComponent(name)}/health`,
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Space marketplace / onboarding helpers
 // ---------------------------------------------------------------------------
 

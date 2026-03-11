@@ -17,3 +17,13 @@ services:
       # Persist ChromaDB's ONNX embedding model (~166MB) on host so it survives
       # `docker compose down -v` and doesn't re-download every test run.
       - ./.cache/chroma-models:/root/.cache/chroma/onnx_models:rw
+
+  # Mock OpenAI-compatible API for model configuration tests.
+  # Space backend reaches it at http://mock-openai:11434/v1 inside the docker network.
+  mock-openai:
+    build:
+      context: ./fixtures/mock-openai
+    networks:
+      - syfthub-network
+    ports:
+      - "11434:11434"
