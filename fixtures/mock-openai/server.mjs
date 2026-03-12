@@ -48,6 +48,11 @@ const server = createServer(async (req, res) => {
   if (req.method === 'POST' && path === '/v1/chat/completions') {
     const body = JSON.parse(await readBody(req));
     const model = body.model ?? 'mock-gpt-4o';
+    const messages = Array.isArray(body.messages) ? body.messages : [];
+    const lastUserMessage = [...messages]
+      .reverse()
+      .find((message) => message?.role === 'user' && typeof message?.content === 'string');
+    const echoedPrompt = lastUserMessage?.content ?? 'No user message provided';
     const reply = {
       id: `chatcmpl-mock-${Date.now()}`,
       object: 'chat.completion',
@@ -56,7 +61,7 @@ const server = createServer(async (req, res) => {
       choices: [
         {
           index: 0,
-          message: { role: 'assistant', content: 'This is a mock response from the E2E test server.' },
+          message: { role: 'assistant', content: `E2E echo: ${echoedPrompt}` },
           finish_reason: 'stop',
         },
       ],

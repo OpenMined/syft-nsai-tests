@@ -225,6 +225,10 @@ interface HealthcheckResponse {
   message: string;
 }
 
+interface PublicUrlResponse {
+  public_url: string | null;
+}
+
 /**
  * Create a model on the Space.
  */
@@ -331,22 +335,42 @@ export async function listMarketplaces(): Promise<MarketplaceResponse[]> {
 }
 
 /**
- * Ensure the Space is onboarded (has at least one marketplace).
- * If not, register one using a timestamped test user.
+ * Ensure the Space is onboarded (has at least one marketplace) and reachable by Hub.
+ * If no marketplace exists, register one using a timestamped test user.
  */
-export async function ensureSpaceOnboarded(): Promise<void> {
+export async function ensureSpaceOnboarded(
+  publicUrl: string = process.env.SPACE_MARKETPLACE_PUBLIC_URL ?? 'http://space:8081',
+): Promise<void> {
   try {
     const existing = await listMarketplaces();
-    if (existing.length > 0) return;
+    if (existing.length === 0) {
+      const ts = Date.now();
+      await registerMarketplace(
+        `e2eauto${ts}`,
+        `e2e-auto-${ts}@test.openmined.org`,
+        'TestPass123!',
+      );
+    }
   } catch {
     // API may 500 if DB not ready yet — fall through to register
+    const ts = Date.now();
+    await registerMarketplace(
+      `e2eauto${ts}`,
+      `e2e-auto-${ts}@test.openmined.org`,
+      'TestPass123!',
+    );
   }
-  const ts = Date.now();
-  await registerMarketplace(
-    `e2eauto${ts}`,
-    `e2e-auto-${ts}@test.openmined.org`,
-    'TestPass123!',
-  );
+  await updateSpacePublicUrl(publicUrl);
+}
+
+/**
+ * Update the Space public URL and sync it to the connected marketplace.
+ */
+export async function updateSpacePublicUrl(publicUrl: string): Promise<PublicUrlResponse> {
+  return request<PublicUrlResponse>(config.space.url, '/api/v1/settings/public-url', {
+    method: 'PATCH',
+    body: JSON.stringify({ public_url: publicUrl }),
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -386,6 +410,7 @@ export async function createEndpoint(
     summary?: string;
     tags?: string;
     description?: string;
+    published?: boolean;
   } = {},
 ): Promise<EndpointResponse> {
   return request<EndpointResponse>(config.space.url, '/api/v1/endpoints/', {
@@ -399,6 +424,7 @@ export async function createEndpoint(
       summary: opts.summary ?? '',
       tags: opts.tags ?? '',
       description: opts.description ?? '',
+      published: opts.published ?? true,
     }),
   });
 }

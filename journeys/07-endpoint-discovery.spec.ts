@@ -17,8 +17,10 @@ const spaceUrl = config.space.url;
 
 const datasetName = `e2e-disc-dataset-${ts}`;
 const modelName = `e2e-disc-model-${ts}`;
-const endpointSlug = `e2e-disc-ep-${ts}`;
-const endpointSummary = 'Discoverable endpoint for E2E testing';
+const dataEndpointSlug = `e2e-disc-data-${ts}`;
+const modelEndpointSlug = `e2e-disc-model-ep-${ts}`;
+const dataEndpointSummary = 'Discoverable data endpoint for E2E testing';
+const modelEndpointSummary = 'Discoverable model endpoint for E2E testing';
 
 let spaceOwner: string;
 
@@ -40,19 +42,27 @@ test.describe('Endpoint Discovery & Query', () => {
       baseUrl: config.mockOpenai.dockerBaseUrl,
     });
 
-    // Create and publish endpoint
-    await createEndpoint(endpointSlug, {
+    // Create and publish raw data endpoint
+    await createEndpoint(dataEndpointSlug, {
       datasetId: dataset.id,
-      modelId: model.id,
-      responseType: 'both',
-      summary: endpointSummary,
-      tags: 'e2e,discovery',
+      responseType: 'raw',
+      summary: dataEndpointSummary,
+      tags: 'e2e,discovery,data',
     });
-    await publishEndpoint(endpointSlug);
+    await publishEndpoint(dataEndpointSlug);
+
+    // Create and publish model endpoint separately for chat model selection
+    await createEndpoint(modelEndpointSlug, {
+      modelId: model.id,
+      responseType: 'summary',
+      summary: modelEndpointSummary,
+      tags: 'e2e,discovery,model',
+    });
+    await publishEndpoint(modelEndpointSlug);
 
     // Discover the Space's hub username from the published endpoint
     const endpoints = (await getPublicEndpoints()) as Array<Record<string, unknown>>;
-    const published = endpoints.find((ep) => ep.slug === endpointSlug) as Record<string, any>;
+    const published = endpoints.find((ep) => ep.slug === dataEndpointSlug) as Record<string, any>;
     spaceOwner =
       published?.owner?.username ?? published?.namespace ?? published?.owner_username;
     if (!spaceOwner) {
@@ -67,7 +77,10 @@ test.describe('Endpoint Discovery & Query', () => {
       // API sanity check
       const publicEndpoints = await getPublicEndpoints();
       expect(publicEndpoints).toEqual(
-        expect.arrayContaining([expect.objectContaining({ slug: endpointSlug })]),
+        expect.arrayContaining([
+          expect.objectContaining({ slug: dataEndpointSlug }),
+          expect.objectContaining({ slug: modelEndpointSlug }),
+        ]),
       );
 
       // UI check
@@ -75,8 +88,8 @@ test.describe('Endpoint Discovery & Query', () => {
       await expect(page.getByText('Browse Library')).toBeVisible({
         timeout: config.timeouts.navigation,
       });
-      await page.locator('#endpoint-search').fill(endpointSlug);
-      await expect(page.getByText(endpointSlug)).toBeVisible({
+      await page.locator('#endpoint-search').fill(dataEndpointSlug);
+      await expect(page.getByText(dataEndpointSlug)).toBeVisible({
         timeout: config.timeouts.action,
       });
     });
@@ -87,11 +100,11 @@ test.describe('Endpoint Discovery & Query', () => {
         timeout: config.timeouts.navigation,
       });
 
-      await page.locator('#endpoint-search').fill(endpointSlug);
+      await page.locator('#endpoint-search').fill(dataEndpointSlug);
       // Wait for debounce
       await page.waitForTimeout(300);
 
-      const endpointCard = page.getByRole('link', { name: new RegExp(endpointSlug) });
+      const endpointCard = page.getByRole('link', { name: new RegExp(dataEndpointSlug) });
       await expect(endpointCard).toBeVisible({
         timeout: config.timeouts.action,
       });
@@ -115,14 +128,14 @@ test.describe('Endpoint Discovery & Query', () => {
 
   test.describe('endpoint detail page', () => {
     test('shows metadata, type, owner, and policies section', async ({ page }) => {
-      await page.goto(`${hubUrl}/${spaceOwner}/${endpointSlug}`);
+      await page.goto(`${hubUrl}/${spaceOwner}/${dataEndpointSlug}`);
 
-      await expect(page.locator('h1', { hasText: endpointSlug })).toBeVisible({
+      await expect(page.locator('h1', { hasText: dataEndpointSlug })).toBeVisible({
         timeout: config.timeouts.navigation,
       });
 
       // Summary
-      await expect(page.getByText(endpointSummary)).toBeVisible({
+      await expect(page.getByText(dataEndpointSummary)).toBeVisible({
         timeout: config.timeouts.assertion,
       });
 
@@ -136,42 +149,63 @@ test.describe('Endpoint Discovery & Query', () => {
   });
 
   test.describe('query flow', () => {
-    // Direct Space query requires a satellite token (issued during hub→Space proxy flow),
-    // not a regular hub user JWT — upgrade once hub query proxy API is available for tests
-    test.fixme('query returns response via Space endpoint API', async () => {
-      const response = await fetch(
-        `${spaceUrl}/api/v1/endpoints/${encodeURIComponent(endpointSlug)}/query`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: 'Bearer <satellite-token>',
-          },
-          body: JSON.stringify({
-            messages: [{ role: 'user', content: 'What is in the test documents?' }],
-          }),
-        },
-      );
+    // Hub chat UI test
+    test('query via Hub chat UI', async ({ page }) => {
+      await page.goto(`${hubUrl}/browse`);
+      await expect(page.getByText('Browse Library')).toBeVisible({
+        timeout: config.timeouts.navigation,
+      });
+      await page.locator('#endpoint-search').fill(dataEndpointSlug);
+      await page
+        .getByRole('button', { name: new RegExp(`Add ${dataEndpointSlug} to context`) })
+        .click();
+      await expect(page.getByRole('button', { name: /start chat/i })).toBeVisible({
+        timeout: config.timeouts.navigation,
+      });
+      await page.getByRole('button', { name: /start chat/i }).click();
 
-      const body = await response.text();
-      expect(response.ok, `POST query → ${response.status}: ${body}`).toBe(true);
-      const data = JSON.parse(body);
-      expect(data).toBeTruthy();
-    });
+      const welcomeTour = page.getByRole('region', { name: 'Welcome' });
+      const skipTour = page.getByRole('button', { name: 'Skip' });
+      await skipTour.click({ timeout: 5_000 }).catch(() => {});
+      await expect(welcomeTour).toBeHidden({
+        timeout: 5_000,
+      }).catch(() => {});
 
-    // Hub chat UI test — upgrade once aggregator ↔ Space connectivity is confirmed
-    test.fixme('query via Hub chat UI', async ({ page }) => {
-      await page.goto(`${hubUrl}/chat`);
+      const selectedModelButton = page.getByRole('button', {
+        name: new RegExp(modelEndpointSlug),
+      });
+      const modelTrigger = page.getByRole('button', { name: /select model/i });
+      await expect(selectedModelButton.or(modelTrigger)).toBeVisible({
+        timeout: config.timeouts.navigation,
+      });
+      if (await modelTrigger.isVisible()) {
+        await expect(modelTrigger).toBeVisible({
+          timeout: config.timeouts.navigation,
+        });
+        await expect(modelTrigger).toBeEnabled({
+          timeout: config.timeouts.navigation,
+        });
+        await modelTrigger.click();
+        await expect(page.getByPlaceholder(/search models/i)).toBeVisible({
+          timeout: config.timeouts.navigation,
+        });
+        await page.getByPlaceholder(/search models/i).fill(modelEndpointSlug);
+        await page.getByRole('option', { name: new RegExp(modelEndpointSlug) }).click();
+        await expect(selectedModelButton).toBeVisible({
+          timeout: config.timeouts.navigation,
+        });
+      }
 
-      // Select the endpoint in chat
-      const queryInput = page.getByPlaceholder(/start making queries/i);
+      const queryInput = page.getByLabel(/chat message/i);
       await expect(queryInput).toBeVisible({ timeout: config.timeouts.navigation });
       await queryInput.fill('What is in the test documents?');
       await queryInput.press('Enter');
 
       // Assert response appears
-      await expect(page.locator('.message-content').first()).toBeVisible({
-        timeout: 30_000,
+      await expect(
+        page.getByText(/E2E echo:.*USER QUESTION:\s*What is in the test documents\?/s),
+      ).toBeVisible({
+        timeout: 120_000,
       });
     });
   });
