@@ -22,8 +22,8 @@ export default async function globalSetup() {
   console.log('[global-setup] Tearing down containers and volumes…');
   execSync('docker compose down -v -t 0', opts);
 
-  console.log('[global-setup] Starting fresh containers…');
-  execSync('docker compose up -d', opts);
+  console.log('[global-setup] Starting fresh containers (with rebuild)…');
+  execSync('docker compose up -d --build', opts);
 
   console.log('[global-setup] Waiting for services to become healthy…');
   await Promise.all([

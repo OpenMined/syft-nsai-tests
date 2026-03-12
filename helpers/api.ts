@@ -225,6 +225,10 @@ interface HealthcheckResponse {
   message: string;
 }
 
+interface PublicUrlResponse {
+  public_url: string | null;
+}
+
 /**
  * Create a model on the Space.
  */
@@ -331,21 +335,111 @@ export async function listMarketplaces(): Promise<MarketplaceResponse[]> {
 }
 
 /**
- * Ensure the Space is onboarded (has at least one marketplace).
- * If not, register one using a timestamped test user.
+ * Ensure the Space is onboarded (has at least one marketplace) and reachable by Hub.
+ * If no marketplace exists, register one using a timestamped test user.
  */
-export async function ensureSpaceOnboarded(): Promise<void> {
+export async function ensureSpaceOnboarded(
+  publicUrl: string = process.env.SPACE_MARKETPLACE_PUBLIC_URL ?? 'http://space:8081',
+): Promise<void> {
   try {
     const existing = await listMarketplaces();
-    if (existing.length > 0) return;
+    if (existing.length === 0) {
+      const ts = Date.now();
+      await registerMarketplace(
+        `e2eauto${ts}`,
+        `e2e-auto-${ts}@test.openmined.org`,
+        'TestPass123!',
+      );
+    }
   } catch {
     // API may 500 if DB not ready yet — fall through to register
+    const ts = Date.now();
+    await registerMarketplace(
+      `e2eauto${ts}`,
+      `e2e-auto-${ts}@test.openmined.org`,
+      'TestPass123!',
+    );
   }
-  const ts = Date.now();
-  await registerMarketplace(
-    `e2eauto${ts}`,
-    `e2e-auto-${ts}@test.openmined.org`,
-    'TestPass123!',
+  await updateSpacePublicUrl(publicUrl);
+}
+
+/**
+ * Update the Space public URL and sync it to the connected marketplace.
+ */
+export async function updateSpacePublicUrl(publicUrl: string): Promise<PublicUrlResponse> {
+  return request<PublicUrlResponse>(config.space.url, '/api/v1/settings/public-url', {
+    method: 'PATCH',
+    body: JSON.stringify({ public_url: publicUrl }),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Space endpoint helpers
+// ---------------------------------------------------------------------------
+
+interface EndpointResponse {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  summary: string;
+  dataset_id?: string;
+  model_id?: string;
+  response_type: string;
+  published: boolean;
+  tags: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface PublishEndpointResponse {
+  endpoint_slug: string;
+  results: Array<{ marketplace_id: string; success: boolean; message?: string; error?: string }>;
+}
+
+/**
+ * Create an endpoint on the Space.
+ */
+export async function createEndpoint(
+  slug: string,
+  opts: {
+    name?: string;
+    datasetId?: string;
+    modelId?: string;
+    responseType?: string;
+    summary?: string;
+    tags?: string;
+    description?: string;
+    published?: boolean;
+  } = {},
+): Promise<EndpointResponse> {
+  return request<EndpointResponse>(config.space.url, '/api/v1/endpoints/', {
+    method: 'POST',
+    body: JSON.stringify({
+      slug,
+      name: opts.name ?? slug,
+      dataset_id: opts.datasetId,
+      model_id: opts.modelId,
+      response_type: opts.responseType ?? 'both',
+      summary: opts.summary ?? '',
+      tags: opts.tags ?? '',
+      description: opts.description ?? '',
+      published: opts.published ?? true,
+    }),
+  });
+}
+
+/**
+ * Publish an endpoint to all registered marketplaces.
+ */
+export async function publishEndpoint(slug: string): Promise<PublishEndpointResponse> {
+  return request<PublishEndpointResponse>(
+    config.space.url,
+    `/api/v1/endpoints/${encodeURIComponent(slug)}/publish`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ publish_to_all_marketplaces: true }),
+    },
   );
 }
 
@@ -416,6 +510,47 @@ export async function publishEndpoint(slug: string): Promise<PublishEndpointResp
     },
   );
 }
+
+/**
+ * List all endpoints on the Space.
+ */
+export async function listSpaceEndpoints(): Promise<EndpointResponse[]> {
+  return request<EndpointResponse[]>(config.space.url, '/api/v1/endpoints/');
+}
+
+/**
+ * Get a single endpoint by slug.
+ */
+export async function getEndpointDetail(slug: string): Promise<EndpointResponse> {
+  return request<EndpointResponse>(
+    config.space.url,
+    `/api/v1/endpoints/${encodeURIComponent(slug)}`,
+  );
+}
+
+/**
+ * Delete an endpoint by slug.
+ */
+export async function deleteEndpoint(slug: string): Promise<{ message: string }> {
+  return request<{ message: string }>(
+    config.space.url,
+    `/api/v1/endpoints/${encodeURIComponent(slug)}`,
+    { method: 'DELETE' },
+  );
+}
+
+/**
+ * Get public endpoints from the Hub.
+ */
+export async function getPublicEndpoints(token?: string): Promise<unknown[]> {
+  return request<unknown[]>(config.hub.backendUrl, '/api/v1/endpoints/public', {
+    headers: token ? authHeaders(token) : {},
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Utilities
+// ---------------------------------------------------------------------------
 
 /**
  * List all endpoints on the Space.

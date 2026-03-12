@@ -4,6 +4,13 @@ services:
     ports:
       - "8000:8000"
 
+  # Persist aggregator reranker model downloads between test runs.
+  aggregator:
+    environment:
+      FASTEMBED_CACHE_PATH: "/app/.cache/fastembed"
+    volumes:
+      - ./.cache/aggregator-fastembed:/app/.cache/fastembed:rw
+
   # Test overrides for Space: join hub network so Space can reach hub services,
   # and point marketplace registration at the local hub proxy.
   # Mount test fixtures so the file explorer can see them during dataset creation.

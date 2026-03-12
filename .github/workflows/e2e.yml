@@ -82,7 +82,13 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .cache/chroma-models
-          key: chroma-onnx-models-v1
+          key: chroma-onnx-models-${{ runner.os }}-${{ hashFiles('syft-space/backend/uv.lock') }}
+
+      - name: Cache aggregator fastembed models
+        uses: actions/cache@v4
+        with:
+          path: .cache/aggregator-fastembed
+          key: fastembed-${{ runner.os }}-${{ hashFiles('syfthub/components/aggregator/uv.lock') }}
 
       - name: Cache Playwright browsers
         id: playwright-cache
