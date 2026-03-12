@@ -42,25 +42,31 @@ jobs:
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      TEST_REPO_DIR: syft-nsai-tests
 
     steps:
       # ── 1. Checkout repos ───────────────────────────────────────────
       - name: Checkout test repo
         uses: actions/checkout@v4
+        with:
+          repository: OpenMined/syft-nsai-tests
+          ref: main
+          path: syft-nsai-tests
 
       - name: Checkout syfthub
         uses: actions/checkout@v4
         with:
           repository: OpenMined/syfthub
           ref: ${{ inputs.syfthub_ref || 'main' }}
-          path: syfthub
+          path: syft-nsai-tests/syfthub
 
       - name: Checkout syft-space
         uses: actions/checkout@v4
         with:
           repository: OpenMined/syft-space
           ref: ${{ inputs.syft_space_ref || 'main' }}
-          path: syft-space
+          path: syft-nsai-tests/syft-space
 
       # ── 2. Build prerequisites ──────────────────────────────────────
       - name: Setup Node
@@ -81,23 +87,24 @@ jobs:
       - name: Cache ChromaDB ONNX models
         uses: actions/cache@v4
         with:
-          path: .cache/chroma-models
-          key: chroma-onnx-models-${{ runner.os }}-${{ hashFiles('syft-space/backend/uv.lock') }}
+          path: syft-nsai-tests/.cache/chroma-models
+          key: chroma-onnx-models-${{ runner.os }}-${{ hashFiles('syft-nsai-tests/syft-space/backend/uv.lock') }}
 
       - name: Cache aggregator fastembed models
         uses: actions/cache@v4
         with:
-          path: .cache/aggregator-fastembed
-          key: fastembed-${{ runner.os }}-${{ hashFiles('syfthub/components/aggregator/uv.lock') }}
+          path: syft-nsai-tests/.cache/aggregator-fastembed
+          key: fastembed-${{ runner.os }}-${{ hashFiles('syft-nsai-tests/syfthub/components/aggregator/uv.lock') }}
 
       - name: Cache Playwright browsers
         id: playwright-cache
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('bun.lockb') }}
+          key: playwright-${{ runner.os }}-${{ hashFiles('syft-nsai-tests/bun.lockb') }}
 
       - name: Build prerequisites, images & install test deps
+        working-directory: ${{ env.TEST_REPO_DIR }}
         run: |
           # Free disk space in background (removes ~15GB of unused pre-installed SDKs)
           (echo "[disk-cleanup] start" && sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc && echo "[disk-cleanup] done") &
@@ -133,6 +140,7 @@ jobs:
 
       # ── 4. Run tests ───────────────────────────────────────────────
       - name: Run E2E tests
+        working-directory: ${{ env.TEST_REPO_DIR }}
         run: npx playwright test
         env:
           CI: true
@@ -143,7 +151,7 @@ jobs:
         uses: dorny/test-reporter@v1
         with:
           name: Playwright Tests
-          path: test-results/junit.xml
+          path: syft-nsai-tests/test-results/junit.xml
           reporter: java-junit
 
       # ── 6. Artifacts ───────────────────────────────────────────────
@@ -152,7 +160,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
-          path: playwright-report/
+          path: syft-nsai-tests/playwright-report/
           retention-days: 14
 
       - name: Upload test results
@@ -160,11 +168,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-results
-          path: test-results/
+          path: syft-nsai-tests/test-results/
           retention-days: 14
 
       - name: Dump service logs on failure
         if: failure()
+        working-directory: ${{ env.TEST_REPO_DIR }}
         run: docker compose logs --tail=200 > /tmp/docker-logs.txt 2>&1
 
       - name: Upload docker logs on failure
@@ -178,4 +187,5 @@ jobs:
       # ── 7. Teardown ────────────────────────────────────────────────
       - name: Stop services
         if: always()
+        working-directory: ${{ env.TEST_REPO_DIR }}
         run: docker compose down
