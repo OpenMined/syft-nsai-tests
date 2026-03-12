@@ -150,8 +150,9 @@ jobs:
         if: always()
         uses: dorny/test-reporter@v1
         with:
+          working-directory: syft-nsai-tests
           name: Playwright Tests
-          path: syft-nsai-tests/test-results/junit.xml
+          path: test-results/junit.xml
           reporter: java-junit
 
       # ── 6. Artifacts ───────────────────────────────────────────────
