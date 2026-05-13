@@ -104,11 +104,16 @@ test.describe('Endpoint Discovery & Query', () => {
       // Wait for debounce
       await page.waitForTimeout(300);
 
-      const endpointCard = page.getByRole('link', { name: new RegExp(dataEndpointSlug) });
-      await expect(endpointCard).toBeVisible({
+      // syfthub's browse cards use a stretched-link pattern: the card-level
+      // <Link> is empty (aria-label="View <endpoint.name>") and the owner
+      // username is rendered as a separate inline <Link to="/<owner>">. The
+      // two locators below assert (a) the card is rendered for the filtered
+      // slug, and (b) the owner link is shown alongside it.
+      const endpointLink = page.getByRole('link', { name: new RegExp(dataEndpointSlug) });
+      await expect(endpointLink).toBeVisible({
         timeout: config.timeouts.action,
       });
-      await expect(endpointCard.getByText(`by @${spaceOwner}`)).toBeVisible({
+      await expect(page.getByRole('link', { name: `@${spaceOwner}` })).toBeVisible({
         timeout: config.timeouts.assertion,
       });
     });
