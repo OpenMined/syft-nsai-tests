@@ -41,7 +41,7 @@ concurrency:
 jobs:
   e2e:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     env:
       TEST_REPO_DIR: syft-nsai-tests
 
@@ -136,7 +136,11 @@ jobs:
           docker buildx bake -f docker-compose.yml -f docker-compose.override.yml -f docker-compose.ci.yml --load
           wait
           echo "[docker-build] done"
-        timeout-minutes: 10
+        # Cold-cache build of the syft-space backend image alone takes 20+ min
+        # because `uv sync --extra libs` resolves torch + chromadb + docling +
+        # onnxruntime on a wolfi/musl base (no manylinux wheels for some deps).
+        # GHA layer caching keeps warm-cache runs to a few minutes.
+        timeout-minutes: 25
 
       # ── 4. Run tests ───────────────────────────────────────────────
       - name: Run E2E tests
