@@ -101,8 +101,14 @@ test.describe('Endpoint Discovery & Query', () => {
       });
 
       await page.locator('#endpoint-search').fill(dataEndpointSlug);
-      // Wait for debounce
-      await page.waitForTimeout(300);
+
+      // Search is server-side and debounced. Wait for the result count to
+      // collapse to 1 — that proves the filter applied, otherwise stale
+      // cards from before the filter still render in the DOM and the
+      // owner-link assertion below matches multiple cards.
+      await expect(page.getByText('1 result (search results)')).toBeVisible({
+        timeout: config.timeouts.action,
+      });
 
       // syfthub's browse cards use a stretched-link pattern: the card-level
       // <Link> is empty (aria-label="View <endpoint.name>") and the owner
