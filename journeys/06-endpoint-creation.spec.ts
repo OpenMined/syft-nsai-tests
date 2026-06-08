@@ -208,8 +208,8 @@ test.describe('Endpoint Creation & Publishing', () => {
       await expect(page.getByText(bothSlug)).toBeVisible();
       await page.getByRole('button', { name: /publish to syfthub/i }).click();
 
-      // Wait for redirect to endpoints list
-      await expect(page.getByText(/your endpoints/i)).toBeVisible({
+      // Wait for redirect to the APIs list (formerly "Your Endpoints")
+      await expect(page.getByRole('heading', { name: 'APIs' })).toBeVisible({
         timeout: 60_000,
       });
       await expect(page.getByRole('heading', { name: bothSlug })).toBeVisible();
@@ -268,8 +268,8 @@ test.describe('Endpoint Creation & Publishing', () => {
       await expect(page.getByText(rawSlug)).toBeVisible();
       await page.getByRole('button', { name: /publish to syfthub/i }).click();
 
-      // Wait for redirect to endpoints list
-      await expect(page.getByText(/your endpoints/i)).toBeVisible({
+      // Wait for redirect to the APIs list (formerly "Your Endpoints")
+      await expect(page.getByRole('heading', { name: 'APIs' })).toBeVisible({
         timeout: 60_000,
       });
       await expect(page.getByRole('heading', { name: rawSlug })).toBeVisible();
