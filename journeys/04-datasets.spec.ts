@@ -25,7 +25,7 @@ const TEST_FILE_NAMES = [
  */
 async function goToDatasetsPage(page: Page) {
   await page.goto(datasetsUrl);
-  await expect(page.getByText(/your datasets/i)).toBeVisible({
+  await expect(page.getByText(/your data sources/i)).toBeVisible({
     timeout: config.timeouts.navigation,
   });
 }
@@ -55,12 +55,12 @@ test.describe('Dataset Management', () => {
   test('create dataset via UI with file selection', async ({ page }) => {
     await goToDatasetsPage(page);
 
-    // Click "Add Dataset" button (page may show both header and empty-state buttons)
-    await page.getByRole('button', { name: /add dataset/i }).first().click();
+    // Click "Add Data Source" button (page may show both header and empty-state buttons)
+    await page.getByRole('button', { name: /add data source/i }).first().click();
 
-    // Dialog should open with "Create Dataset" title
+    // Dialog should open with "Add Data Source" title
     await expect(
-      page.getByRole('heading', { name: /create dataset/i }),
+      page.getByRole('heading', { name: /add data source/i }),
     ).toBeVisible();
 
     // Fill dataset name
@@ -87,19 +87,20 @@ test.describe('Dataset Management', () => {
     await page.locator('#summary').fill('E2E test dataset with sample documents');
 
     // Add a tag (scope assertion to dialog to avoid matching tags on list behind)
-    const dialog = page.getByLabel('Create Dataset');
+    const dialog = page.getByLabel('Add Data Source');
     await dialog.locator('#topics').fill('e2e-test');
     await dialog.locator('#topics').press('Enter');
     await expect(dialog.getByText('e2e-test')).toBeVisible();
 
-    // Submit — "Create Dataset" button should be enabled now
-    const createBtn = page.getByRole('button', { name: /create dataset/i });
+    // Submit — the dialog's "Add Data Source" button should be enabled now.
+    // Scope to the dialog: the page header/empty-state buttons share this label.
+    const createBtn = dialog.getByRole('button', { name: /add data source/i });
     await expect(createBtn).toBeEnabled();
     await createBtn.click();
 
     // Dialog should close and toast should confirm creation
     await expect(
-      page.getByRole('heading', { name: /create dataset/i }),
+      page.getByRole('heading', { name: /add data source/i }),
     ).toBeHidden({ timeout: config.timeouts.navigation });
 
     // The new dataset should appear in the list (use heading to avoid matching toast)
@@ -111,8 +112,9 @@ test.describe('Dataset Management', () => {
   test('dataset detail page shows watched paths and config', async ({ page }) => {
     await goToDatasetDetail(page, datasetName);
 
-    // Summary grid should show file counts
-    await expect(page.getByText(/files/i)).toBeVisible();
+    // Summary grid should show file counts ("<N> files indexed").
+    // Scope to that stat — a "Files" tab also matches /files/i now.
+    await expect(page.getByText(/files indexed/i)).toBeVisible();
 
     // "Watched Paths" section should show our test-docs path and "Watching" status
     await expect(page.getByText(TEST_DOCS_PATH).first()).toBeVisible({
@@ -130,16 +132,18 @@ test.describe('Dataset Management', () => {
     test.setTimeout(180_000); // ingestion polling can take a while
     await goToDatasetDetail(page, datasetName);
 
-    // Poll the overview tab until ingestion finishes.
-    // The status labels render as "Indexed (N)" / "Queued (N)" etc.
-    // Files are small (<1 KB each) so ingestion should be fast, but we
-    // reload periodically in case it hasn't finished on first load.
+    // The per-status counts ("Indexed (N)" / "Queued (N)" / …) live on the
+    // Files tab. Poll it until nothing is queued or processing. Files are
+    // small (<1 KB each) so ingestion should be fast, but we reload
+    // periodically in case it hasn't finished on first load.
     await expect(async () => {
       await page.reload();
       // Wait for the detail page to render
       await expect(
         page.getByRole('heading', { name: datasetName }),
       ).toBeVisible();
+      // Status counts are on the Files tab (reload resets to Overview)
+      await page.getByRole('tab', { name: /files/i }).click();
       // Check that no jobs are still queued or processing
       await expect(page.getByText(/queued \(0\)/i)).toBeVisible();
       await expect(page.getByText(/processing \(0\)/i)).toBeVisible();
@@ -152,11 +156,12 @@ test.describe('Dataset Management', () => {
     await expect(page.getByText(/errored \(0\)/i)).toBeVisible();
   });
 
-  test('analytics tab shows individual ingested files', async ({ page }) => {
+  test('files tab shows individual ingested files', async ({ page }) => {
     await goToDatasetDetail(page, datasetName);
 
-    // Switch to the Analytics tab
-    await page.getByRole('tab', { name: /analytics/i }).click();
+    // Switch to the Files tab (the standalone Analytics tab was removed; the
+    // per-file list with status filters now lives here).
+    await page.getByRole('tab', { name: /files/i }).click();
 
     // The default filter is "Completed" (Indexed). Our 3 files should be listed.
     for (const fileName of TEST_FILE_NAMES) {
@@ -191,7 +196,7 @@ test.describe('Dataset Management', () => {
 
     // Edit dialog should open with pre-filled name
     await expect(
-      page.getByRole('heading', { name: /edit dataset/i }),
+      page.getByRole('heading', { name: /edit data source/i }),
     ).toBeVisible();
     await expect(page.locator('#dataset-name')).toHaveValue(datasetName);
 
@@ -204,12 +209,12 @@ test.describe('Dataset Management', () => {
     await dialog.locator('#topics').press('Enter');
     await expect(dialog.getByText('updated-tag')).toBeVisible();
 
-    // Submit
-    await page.getByRole('button', { name: /update dataset/i }).click();
+    // Submit (edit mode's button is labelled "Save Changes")
+    await page.getByRole('button', { name: /save changes/i }).click();
 
     // Dialog should close
     await expect(
-      page.getByRole('heading', { name: /edit dataset/i }),
+      page.getByRole('heading', { name: /edit data source/i }),
     ).toBeHidden({ timeout: config.timeouts.navigation });
 
     // Verify changes on the detail page

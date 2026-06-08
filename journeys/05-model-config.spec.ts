@@ -44,7 +44,7 @@ test.describe('Model Configuration', () => {
 
     // Dialog should open
     await expect(
-      page.getByRole('heading', { name: /create model/i }),
+      page.getByRole('heading', { name: /add model/i }),
     ).toBeVisible();
 
     // Fill model name
@@ -60,8 +60,8 @@ test.describe('Model Configuration', () => {
     // Fill API key — this triggers a debounced fetch of available models
     await page.locator('#api-key').fill(MOCK_API_KEY);
 
-    // Wait for the model list to load from mock server
-    await expect(page.getByText(/models available/i)).toBeVisible({
+    // Wait for the model list to load from mock server (shown as "<N> available")
+    await expect(page.getByText(/\d+ available/i)).toBeVisible({
       timeout: config.timeouts.action,
     });
 
@@ -74,14 +74,15 @@ test.describe('Model Configuration', () => {
     // Fill optional summary
     await page.locator('#summary').fill('E2E test model using mock OpenAI API');
 
-    // Submit — "Create Model" button should be enabled
-    const createBtn = page.getByRole('button', { name: /create model/i });
+    // Submit — the dialog's "Add Model" button should be enabled.
+    // Scope to the dialog: the page header button shares this label.
+    const createBtn = dialog.getByRole('button', { name: /add model/i });
     await expect(createBtn).toBeEnabled();
     await createBtn.click();
 
     // Dialog should close
     await expect(
-      page.getByRole('heading', { name: /create model/i }),
+      page.getByRole('heading', { name: /add model/i }),
     ).toBeHidden({ timeout: config.timeouts.navigation });
 
     // Model should appear in the list
@@ -115,9 +116,9 @@ test.describe('Model Configuration', () => {
     // Summary should be displayed in the header paragraph
     await expect(page.getByText('E2E test model using mock OpenAI API')).toBeVisible();
 
-    // Connected endpoints should show zero
+    // Connected APIs should show zero (section renamed from "Connected Endpoints")
     await expect(
-      page.getByRole('heading', { name: /connected endpoints \(0\)/i }),
+      page.getByRole('heading', { name: /connected apis \(0\)/i }),
     ).toBeVisible();
   });
 
@@ -145,8 +146,8 @@ test.describe('Model Configuration', () => {
     await dialog.locator('#topics').press('Enter');
     await expect(dialog.getByText('e2e-tag')).toBeVisible();
 
-    // Submit
-    await page.getByRole('button', { name: /update model/i }).click();
+    // Submit (edit mode's button is labelled "Save Changes")
+    await page.getByRole('button', { name: /save changes/i }).click();
 
     // Dialog should close
     await expect(

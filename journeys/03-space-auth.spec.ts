@@ -141,9 +141,9 @@ test.describe('Space Authentication & Onboarding', () => {
       // Submit
       await page.getByRole('button', { name: /complete setup/i }).click();
 
-      // UI: should redirect to Space home page
+      // UI: should redirect to Space home page (hero: "Your space to share knowledge")
       await expect(
-        page.getByRole('heading', { name: /welcome to your syft space/i }),
+        page.getByRole('heading', { name: /your space to share/i }),
       ).toBeVisible({ timeout: 60_000 });
 
       // Verify user was also created on the hub
