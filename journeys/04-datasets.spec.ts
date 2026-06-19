@@ -55,8 +55,18 @@ test.describe('Dataset Management', () => {
   test('create dataset via UI with file selection', async ({ page }) => {
     await goToDatasetsPage(page);
 
-    // Click "Add Data Source" button (page may show both header and empty-state buttons)
-    await page.getByRole('button', { name: /add data source/i }).first().click();
+    // Open the source picker. The header action is now a generic "Add" button;
+    // the empty-state button ("Add Data Source") also opens the same picker.
+    await page.getByRole('button', { name: 'Add', exact: true }).first().click();
+
+    // The "Choose data source" picker opens first (added with multi-source support).
+    // Select the "Local files" source type, then continue to the create dialog.
+    await expect(
+      page.getByRole('heading', { name: /choose data source/i }),
+    ).toBeVisible({ timeout: config.timeouts.action });
+    await page.locator('#source-type').click();
+    await page.getByRole('option', { name: /local files/i }).click();
+    await page.getByRole('button', { name: /continue/i }).click();
 
     // Dialog should open with "Add Data Source" title
     await expect(
