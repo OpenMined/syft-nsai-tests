@@ -188,10 +188,11 @@ test.describe('Dataset Management', () => {
       timeout: config.timeouts.assertion,
     });
 
-    // Click the "Errored" filter tab — should show no files
+    // Click the "Errored" filter tab — should show no items.
+    // Empty state is now "No <status> items found" (was "...files found").
     await page.getByText(/errored \(0\)/i).click();
     await expect(
-      page.getByText(/no errored files found/i),
+      page.getByText(/no errored items found/i),
     ).toBeVisible({ timeout: config.timeouts.assertion });
   });
 

@@ -110,8 +110,10 @@ test.describe('Model Configuration', () => {
     });
     await expect(page.getByText(MOCK_MODEL_ID, { exact: true })).toBeVisible();
 
-    // API key should be masked
-    await expect(page.getByText('••••••••')).toBeVisible();
+    // The API key is redacted from API responses (dropped server-side), so the
+    // detail page can't show a masked value — it renders "Not configured".
+    // This asserts the raw key is never exposed to the client.
+    await expect(page.getByText('Not configured')).toBeVisible();
 
     // Summary should be displayed in the header paragraph
     await expect(page.getByText('E2E test model using mock OpenAI API')).toBeVisible();
