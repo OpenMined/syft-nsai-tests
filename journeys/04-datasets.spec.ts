@@ -78,9 +78,12 @@ test.describe('Dataset Management', () => {
 
     // --- File Explorer: navigate to the mounted test-docs directory ---
 
-    // The file explorer starts at ~ (/home/appuser). We need to find and
-    // expand the "test-docs" directory, then select it via its checkbox.
-    const testDocsNode = page.locator('.tree-node').filter({
+    // The file explorer starts at the home directory (~). We need to find the
+    // "test-docs" directory and select it via its checkbox. The tree was
+    // reworked into the generic SourceBrowser, so nodes are now `.source-node`
+    // (was `.tree-node`). For local files the container mode is "self", so
+    // ticking a directory's checkbox selects that directory's own path.
+    const testDocsNode = page.locator('.source-node').filter({
       hasText: 'test-docs',
     });
     await expect(testDocsNode).toBeVisible({ timeout: config.timeouts.action });
