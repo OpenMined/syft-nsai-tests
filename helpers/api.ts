@@ -148,7 +148,13 @@ export async function createDataset(
       name,
       summary: options?.summary ?? '',
       tags: options?.tags ?? '',
-      configuration: { filePaths },
+      // Selection lives in the dataset_selection table, not in configuration
+      // (filePaths was the pre-cutover shape and is now ignored by the API).
+      configuration: {},
+      selected_items: filePaths.map((fp) => ({
+        item_id: fp.path,
+        description: fp.description,
+      })),
     }),
   });
 }
