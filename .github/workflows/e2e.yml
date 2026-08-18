@@ -88,7 +88,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: syft-nsai-tests/.cache/chroma-models
-          key: chroma-onnx-models-${{ runner.os }}-${{ hashFiles('syft-nsai-tests/syft-space/backend/uv.lock') }}
+          key: chroma-onnx-models-${{ runner.os }}-${{ hashFiles('syft-nsai-tests/syft-space/packages/spaces/backend/uv.lock') }}
 
       - name: Cache aggregator fastembed models
         uses: actions/cache@v4
@@ -111,7 +111,7 @@ jobs:
 
           # Build syfthub SDK and syft-space frontend in parallel
           (echo "[sdk] start" && cd syfthub/sdk/typescript && npm ci && ./node_modules/.bin/tsup && echo "[sdk] done") &
-          (echo "[frontend] start" && cd syft-space/frontend && bun install && bun run build && echo "[frontend] done") &
+          (echo "[frontend] start" && cd syft-space/packages/spaces/frontend && bun install && bun run build && echo "[frontend] done") &
 
           # Install test deps in parallel
           (
