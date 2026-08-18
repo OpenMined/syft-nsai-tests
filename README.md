@@ -56,6 +56,6 @@ versions.json       # Pinned service versions
 
 - **Services won't start**: Check `docker compose logs <service>`
 - **Hub frontend errors**: Ensure `@syfthub/sdk` is built (`./syfthub/sdk/typescript`)
-- **Space blank page**: Ensure frontend is built (`./syft-space/frontend`) without `TAURI_ENV_PLATFORM` set
+- **Space blank page**: Ensure frontend is built (`./syft-space/packages/spaces/frontend`) without `TAURI_ENV_PLATFORM` set
 - **Tests timeout**: Increase `config.timeouts` in `helpers/config.ts`
 - **Port conflicts**: Update ports in `.env` and `docker-compose.yml`

@@ -5,7 +5,7 @@ services:
   # --- Syft Space ---
   space:
     build:
-      context: ./syft-space
+      context: ./syft-space/packages/spaces
       dockerfile: Dockerfile
     environment:
       SYFT_PORT: "8081"

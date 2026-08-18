@@ -29,7 +29,7 @@ npm ci
 cd "$SCRIPT_DIR"
 
 # Build syft-space frontend (required for space Docker image)
-cd ./syft-space/frontend
+cd ./syft-space/packages/spaces/frontend
 bun install
 bun run build
 cd "$SCRIPT_DIR"
