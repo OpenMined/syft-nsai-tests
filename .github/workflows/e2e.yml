@@ -176,17 +176,15 @@ jobs:
           path: syft-nsai-tests/test-results/
           retention-days: 14
 
-      - name: Dump service logs on failure
-        if: failure()
-        working-directory: ${{ env.TEST_REPO_DIR }}
-        run: docker compose logs --tail=200 > /tmp/docker-logs.txt 2>&1
-
+      # Container logs are captured by global-teardown.ts before it runs
+      # `docker compose down -v`; by the time this step runs the containers
+      # are already gone, so they cannot be collected here.
       - name: Upload docker logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: docker-logs
-          path: /tmp/docker-logs.txt
+          path: syft-nsai-tests/test-results/docker-logs.txt
           retention-days: 7
 
       # ── 7. Teardown ────────────────────────────────────────────────
