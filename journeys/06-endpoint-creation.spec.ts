@@ -120,9 +120,11 @@ test.describe('Endpoint Creation & Publishing', () => {
 
       await page.locator('#endpoint-name').fill(takenSlug);
 
-      // Wait for the debounced availability check
+      // Wait for the debounced availability check. The Space checks its own
+      // endpoints first ("...with this name in this space."); a slug only the
+      // Hub knows comes back with the Hub's reason ("...with this slug").
       await expect(
-        page.getByText(/already have an endpoint with this slug/i),
+        page.getByText(/already have an endpoint with this (name|slug)/i),
       ).toBeVisible({ timeout: config.timeouts.action });
     });
 
