@@ -109,8 +109,7 @@ jobs:
           # Free disk space in background (removes ~15GB of unused pre-installed SDKs)
           (echo "[disk-cleanup] start" && sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc && echo "[disk-cleanup] done") &
 
-          # Build syfthub SDK and syft-space frontend in parallel
-          (echo "[sdk] start" && cd syfthub/sdk/typescript && npm ci && ./node_modules/.bin/tsup && echo "[sdk] done") &
+          # Build the syft-space frontend
           (echo "[frontend] start" && cd syft-space/packages/spaces/frontend && bun install && bun run build && echo "[frontend] done") &
 
           # Install test deps in parallel

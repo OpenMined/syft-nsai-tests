@@ -22,12 +22,6 @@ SYFT_SPACE_PATH="${SYFT_SPACE_PATH:-../syft-space}"
 [ -L ./syfthub ] || ln -sf "$SYFTHUB_PATH" ./syfthub
 [ -L ./syft-space ] || ln -sf "$SYFT_SPACE_PATH" ./syft-space
 
-# Build syfthub SDK (required for hub frontend)
-cd ./syfthub/sdk/typescript
-npm ci
-./node_modules/.bin/tsup
-cd "$SCRIPT_DIR"
-
 # Build syft-space frontend (required for space Docker image)
 cd ./syft-space/packages/spaces/frontend
 bun install

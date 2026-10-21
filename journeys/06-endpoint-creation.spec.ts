@@ -122,7 +122,7 @@ test.describe('Endpoint Creation & Publishing', () => {
 
       // Wait for the debounced availability check
       await expect(
-        page.getByText(/this name is already taken/i),
+        page.getByText(/already have an endpoint with this slug/i),
       ).toBeVisible({ timeout: config.timeouts.action });
     });
 
