@@ -17,6 +17,9 @@ on:
       syft_space_ref:
         type: string
         default: "main"
+      tests_ref:
+        type: string
+        default: "main"
 
   schedule:
     - cron: "0 6 * * *" # every day at 06:00 UTC
@@ -29,6 +32,9 @@ on:
       syft_space_ref:
         description: "syft-space branch/tag/SHA to test"
         default: "main"
+      tests_ref:
+        description: "syft-nsai-tests ref to run; empty = the branch dispatched from"
+        default: ""
 
   push:
     branches: [main]
@@ -47,11 +53,14 @@ jobs:
 
     steps:
       # ── 1. Checkout repos ───────────────────────────────────────────
+      # The journeys come from the ref being worked on: a caller (syfthub /
+      # syft-space) and the nightly run take main; a dispatch from a branch
+      # runs that branch's journeys unless tests_ref says otherwise.
       - name: Checkout test repo
         uses: actions/checkout@v4
         with:
           repository: OpenMined/syft-nsai-tests
-          ref: main
+          ref: ${{ inputs.tests_ref || github.ref }}
           path: syft-nsai-tests
 
       - name: Checkout syfthub

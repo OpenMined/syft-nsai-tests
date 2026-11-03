@@ -43,3 +43,10 @@ services:
         - type=gha,scope=mock-openai
       cache_to:
         - type=gha,mode=max,scope=mock-openai
+
+  mock-wordpress:
+    build:
+      cache_from:
+        - type=gha,scope=mock-wordpress
+      cache_to:
+        - type=gha,mode=max,scope=mock-wordpress
