@@ -312,7 +312,11 @@ test.describe('Dataset configuration edit', () => {
       await expect(dialog.locator('#cfg-content_property')).toHaveValue('content');
       // The API key; the headers map is empty so it contributes no entry.
       await expect(dialog.getByText('Configured').first()).toBeVisible();
-      await expect(dialog.locator('#cfg-collection_name')).toHaveCount(0);
+      // The collection is editable for a remote cluster (syft-space #272);
+      // the query filters are the one locked field and are never offered.
+      await expect(dialog.locator('#cfg-collection_name')).toHaveValue('Articles');
+      await expect(dialog.locator('#cfg-search_mode')).toBeVisible();
+      await expect(dialog.locator('#cfg-filters')).toHaveCount(0);
 
       await dialog.locator('#cfg-content_property').fill('body');
 
