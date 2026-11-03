@@ -16,6 +16,14 @@ export const config = {
     apiKey: 'mock-api-key',
     model: 'mock-gpt-4o',
   },
+  mockWordpress: {
+    /** Site URL as the Space backend reaches it (inside docker network) */
+    dockerBaseUrl: process.env.MOCK_WORDPRESS_DOCKER_URL ?? 'http://mock-wordpress:8089',
+    /** URL reachable from the test runner (host machine) */
+    hostBaseUrl: process.env.MOCK_WORDPRESS_HOST_URL ?? 'http://localhost:8089',
+    username: 'e2e-editor',
+    applicationPassword: 'e2e-app-password',
+  },
   testUser: {
     email: process.env.TEST_USER_EMAIL ?? 'e2e@openmined.org',
     password: process.env.TEST_USER_PASSWORD ?? 'TestPass123!',

@@ -33,6 +33,10 @@ journeys/           # Test specs — one per user journey
 helpers/            # Shared utilities
   api.ts            # API helpers for seeding/assertions
   config.ts         # URLs, ports, timeouts
+fixtures/           # Services and files the journeys depend on
+  test-docs/        # Files mounted into the Space for the local-file dataset
+  mock-openai/      # OpenAI-compatible API for the model journey
+  mock-wordpress/   # WordPress REST API for the configuration-edit journey
 docker-compose.yml  # Includes syfthub compose + defines space service
 docker-compose.override.yml  # Exposes backend port for test API access
 versions.json       # Pinned service versions

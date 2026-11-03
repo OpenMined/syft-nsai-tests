@@ -34,3 +34,13 @@ services:
       - syfthub-network
     ports:
       - "11434:11434"
+
+  # Mock WordPress REST API for the dataset configuration-edit journey.
+  # Space backend reaches it at http://mock-wordpress:8089 inside the docker network.
+  mock-wordpress:
+    build:
+      context: ./fixtures/mock-wordpress
+    networks:
+      - syfthub-network
+    ports:
+      - "8089:8089"

@@ -5,9 +5,16 @@ interface AuthResponse {
   token_type: string;
 }
 
-interface UserResponse {
-  id: string;
-  email: string;
+/**
+ * `POST /api/v1/auth/register` returns a RegistrationResponse: the user is
+ * nested, and the tokens are null when the hub asks for email verification
+ * first. Verification is a claim, not a gate, so `loginUser` works either way.
+ */
+interface RegistrationResponse {
+  user: Record<string, string | number | boolean | null>;
+  access_token: string | null;
+  refresh_token: string | null;
+  requires_email_verification: boolean;
 }
 
 async function request<T>(
@@ -44,10 +51,10 @@ export async function registerUser(
   password: string = config.testUser.password,
   username?: string,
   fullName?: string,
-): Promise<UserResponse> {
+): Promise<RegistrationResponse> {
   const derivedUsername =
     username ?? email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '').padEnd(3, 'x');
-  return request<UserResponse>(config.hub.backendUrl, '/api/v1/auth/register', {
+  return request<RegistrationResponse>(config.hub.backendUrl, '/api/v1/auth/register', {
     method: 'POST',
     body: JSON.stringify({
       email,
@@ -91,15 +98,27 @@ export async function getEndpoints(token: string): Promise<unknown[]> {
   });
 }
 
+interface WalletBalanceResponse {
+  balance: number;
+  currency: string;
+  recent_transactions: unknown[];
+  wallet_configured: boolean;
+}
+
 /**
- * Get accounting balance for the authenticated user.
+ * Get the wallet balance for the authenticated user.
+ *
+ * Replaces `/api/v1/users/me/accounting`, which the hub removed — that route
+ * returned accounting *credentials*, not a balance. `/wallet/balance` is the
+ * balance read, and reports `wallet_configured: false` with a zero balance
+ * when the account has no wallet address.
  */
 export async function getBalance(
   token: string,
-): Promise<{ balance: number }> {
-  return request<{ balance: number }>(
+): Promise<WalletBalanceResponse> {
+  return request<WalletBalanceResponse>(
     config.hub.backendUrl,
-    '/api/v1/users/me/accounting',
+    '/api/v1/wallet/balance',
     { headers: authHeaders(token) },
   );
 }
@@ -157,6 +176,17 @@ export async function createDataset(
       })),
     }),
   });
+}
+
+/**
+ * Delete a dataset by name. Fails while an endpoint still uses it.
+ */
+export async function deleteDataset(name: string): Promise<{ message: string }> {
+  return request<{ message: string }>(
+    config.space.url,
+    `/api/v1/datasets/${encodeURIComponent(name)}`,
+    { method: 'DELETE' },
+  );
 }
 
 /**
@@ -370,7 +400,14 @@ export async function ensureSpaceOnboarded(
 }
 
 /**
- * Update the Space public URL and sync it to the connected marketplace.
+ * Update the Space public URL.
+ *
+ * The Space stores it, then registers or moves its satellite on the *default*
+ * marketplace via the hub's `POST/PUT /api/v1/satellites` — this replaced the
+ * deprecated `PUT /users/me {domain}` sync. So a marketplace must already be
+ * registered when this is called, which is why `ensureSpaceOnboarded` does
+ * that first; with no default marketplace the URL is stored and no satellite
+ * is registered, and the hub then has no origin to serve endpoints from.
  */
 export async function updateSpacePublicUrl(publicUrl: string): Promise<PublicUrlResponse> {
   return request<PublicUrlResponse>(config.space.url, '/api/v1/settings/public-url', {
