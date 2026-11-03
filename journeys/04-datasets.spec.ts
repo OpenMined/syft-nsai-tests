@@ -208,19 +208,21 @@ test.describe('Dataset Management', () => {
     });
     await datasetCard.getByRole('button', { name: /edit/i }).click();
 
-    // Edit dialog should open with pre-filled name
+    // Edit dialog should open with pre-filled name. Editing has its own
+    // dialog (EditDatasetDialog) with `edit-dataset-*` ids; create keeps
+    // `dataset-name` / `summary` / `topics`.
     await expect(
       page.getByRole('heading', { name: /edit data source/i }),
     ).toBeVisible();
-    await expect(page.locator('#dataset-name')).toHaveValue(datasetName);
+    await expect(page.locator('#edit-dataset-name')).toHaveValue(datasetName);
 
     // Update summary
-    await page.locator('#summary').fill('Updated summary for E2E dataset');
+    await page.locator('#edit-dataset-summary').fill('Updated summary for E2E dataset');
 
     // Add a tag
     const dialog = page.getByRole('dialog');
-    await dialog.locator('#topics').fill('updated-tag');
-    await dialog.locator('#topics').press('Enter');
+    await dialog.locator('#edit-dataset-tags').fill('updated-tag');
+    await dialog.locator('#edit-dataset-tags').press('Enter');
     await expect(dialog.getByText('updated-tag')).toBeVisible();
 
     // Submit (edit mode's button is labelled "Save Changes")
